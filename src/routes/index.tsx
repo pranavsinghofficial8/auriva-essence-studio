@@ -435,7 +435,7 @@ function Home() {
         <h2 className="font-display text-[24px]">Auriva Instashop</h2>
         <div className="hairline mt-4 w-24" />
 
-        <div className="-mx-6 mt-10 flex snap-x gap-px overflow-x-auto px-6 pb-2 sm:-mx-10 sm:px-10">
+        <div className="mt-10 flex snap-x gap-px overflow-x-auto pb-2">
           {instaShots.map((src, i) => (
             <div
               key={i}
