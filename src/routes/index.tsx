@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactElement } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
 import { Logo } from "@/components/auriva/Logo";
@@ -132,7 +132,7 @@ function TextTile({
   body,
   link,
 }: {
-  Icon: (p: { className?: string }) => JSX.Element;
+  Icon: (p: { className?: string }) => ReactElement;
   heading: string;
   body: string;
   link: string;
@@ -166,7 +166,7 @@ function PhotoTile({ src, alt }: { src: string; alt: string }) {
 
 function Home() {
   const [slide, setSlide] = useState(0);
-  const current = bestsellers[slide];
+  const current = bestsellers[slide] ?? bestsellers[0]!;
 
   return (
     <div id="top" className="bg-background">
