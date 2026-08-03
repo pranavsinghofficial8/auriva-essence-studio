@@ -332,9 +332,14 @@ function Home() {
             className="h-full w-full object-cover opacity-80"
           />
           <span
-            className="pointer-events-none absolute top-1/2 left-0 origin-left -translate-y-1/2 -rotate-90 font-display text-[64px] tracking-[0.22em] text-walnut-foreground/25 lg:text-[86px]"
-            style={{ fontFamily: "var(--font-display)", transform: "translateX(-18%) rotate(-90deg)" }}
+            className="pointer-events-none absolute top-1/2 left-0 font-display text-[52px] tracking-[0.22em] whitespace-nowrap text-walnut-foreground/30 lg:text-[76px]"
+            style={{
+              fontFamily: "var(--font-display)",
+              transform: "rotate(-90deg) translate(-50%, -0.2em)",
+              transformOrigin: "left top",
+            }}
           >
+
             BESTSELLER
           </span>
         </div>
