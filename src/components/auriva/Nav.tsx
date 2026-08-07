@@ -1,29 +1,40 @@
 import { useEffect, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { BagIcon } from "./marks";
 
-const menu = [
-  { label: "Home", href: "#top" },
+const menu: {
+  label: string;
+  to: string;
+  hash?: string;
+  children?: { label: string; to: string }[];
+}[] = [
+  { label: "Home", to: "/" },
   {
     label: "Shop",
-    href: "#collection",
-    children: ["Incense Sticks", "Incense Cones", "Dhoop Sticks"],
+    to: "/shop",
+    children: [
+      { label: "Incense Sticks", to: "/shop/incense-sticks" },
+      { label: "Incense Cones", to: "/shop/incense-cones" },
+      { label: "Bambooless Sticks", to: "/shop/bambooless-sticks" },
+    ],
   },
-  { label: "Journal", href: "#journal" },
-  { label: "About Us", href: "#about" },
-  { label: "Contact Us", href: "#contact" },
+  { label: "Journal", to: "/", hash: "journal" },
+  { label: "About Us", to: "/", hash: "about" },
+  { label: "Contact Us", to: "/", hash: "contact" },
 ];
 
-export function Nav() {
+export function Nav({ threshold }: { threshold?: number }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > window.innerHeight - 90);
+    const onScroll = () =>
+      setScrolled(window.scrollY > (threshold ?? window.innerHeight - 90));
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [threshold]);
 
   const solid = scrolled || open;
 
@@ -52,17 +63,17 @@ export function Nav() {
           </button>
         </div>
 
-        <a href="#top" className="flex justify-center">
+        <Link to="/" className="flex justify-center">
           <Logo tagline={false} />
-        </a>
+        </Link>
 
         <div className="flex items-center justify-end gap-6">
-          <a
-            href="#signup"
+          <Link
+            to="/shop"
             className="label-track hidden transition-opacity duration-300 hover:opacity-60 sm:inline"
           >
-            Sign Up
-          </a>
+            Shop
+          </Link>
           <button
             type="button"
             aria-label="Shopping bag"
@@ -75,32 +86,33 @@ export function Nav() {
 
       <div
         className={`overflow-hidden border-border/60 bg-background text-foreground transition-[max-height,opacity] duration-500 ease-out ${
-          open ? "max-h-[520px] border-t opacity-100" : "max-h-0 opacity-0"
+          open ? "max-h-[560px] border-t opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <nav className="mx-auto grid w-full max-w-[1600px] gap-10 px-6 py-14 sm:grid-cols-2 sm:px-10 sm:py-20">
           <ul className="space-y-5">
             {menu.map((item) => (
               <li key={item.label}>
-                <a
-                  href={item.href}
+                <Link
+                  to={item.to}
+                  {...(item.hash ? { hash: item.hash } : {})}
                   onClick={() => setOpen(false)}
                   className="font-display text-[30px] leading-tight transition-opacity duration-300 hover:opacity-50"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   {item.label}
-                </a>
+                </Link>
                 {item.children ? (
                   <ul className="mt-3 space-y-2 pl-1">
                     {item.children.map((child) => (
-                      <li key={child}>
-                        <a
-                          href="#collection"
+                      <li key={child.label}>
+                        <Link
+                          to={child.to}
                           onClick={() => setOpen(false)}
                           className="label-track text-muted-foreground transition-colors duration-300 hover:text-foreground"
                         >
-                          {child}
-                        </a>
+                          {child.label}
+                        </Link>
                       </li>
                     ))}
                   </ul>
