@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
-import { Logo } from "@/components/auriva/Logo";
+import { Footer } from "@/components/auriva/Footer";
 import {
   AuraMark,
   BagIcon,
@@ -48,28 +48,31 @@ export const Route = createFileRoute("/")({
 /* ---------------------------------- data --------------------------------- */
 
 const categories = [
-  { name: "Incense Sticks", label: "The Everyday Ritual", img: catSticks },
-  { name: "Incense Cones", label: "For Slower Moments", img: catCones },
-  { name: "Dhoop Sticks", label: "A Deeper Ritual", img: catDhoop },
-];
+  { name: "Incense Sticks", slug: "incense-sticks", label: "The Everyday Ritual", img: catSticks },
+  { name: "Incense Cones", slug: "incense-cones", label: "For Slower Moments", img: catCones },
+  { name: "Bambooless Sticks", slug: "bambooless-sticks", label: "A Deeper Ritual", img: catDhoop },
+] as const;
 
 const bestsellers = [
   {
-    name: "Incense Sticks",
+    slug: "nagchampa",
+    name: "Nagchampa Sticks",
     descriptor: "Lotus, cedar and warm resin — for the morning hour.",
-    price: "₹349",
+    price: "₹195",
     img: catSticks,
   },
   {
-    name: "Incense Cones",
+    slug: "oudh",
+    name: "Oudh Cones",
     descriptor: "Vetiver and dried petal — a slower, denser drift.",
-    price: "₹349",
+    price: "₹185",
     img: catCones,
   },
   {
-    name: "Dhoop Sticks",
+    slug: "coconut-cinnamon",
+    name: "Coconut & Cinnamon",
     descriptor: "Sandal and amber — grounding, resinous, deep.",
-    price: "₹349",
+    price: "₹225",
     img: catDhoop,
   },
 ];
@@ -114,15 +117,15 @@ const instaShots = [
 
 function ArrowLink({ children, className = "" }: { children: string; className?: string }) {
   return (
-    <a
-      href="#collection"
+    <Link
+      to="/shop"
       className={`label-track group inline-flex items-center gap-3 transition-opacity duration-500 hover:opacity-60 ${className}`}
     >
       {children}
       <span className="inline-block transition-transform duration-500 group-hover:translate-x-1.5">
         →
       </span>
-    </a>
+    </Link>
   );
 }
 
@@ -266,9 +269,10 @@ function Home() {
 
           <div className="grid gap-px bg-stone-deep sm:grid-cols-3">
             {categories.map((c) => (
-              <a
+              <Link
                 key={c.name}
-                href="#collection"
+                to="/shop/$category"
+                params={{ category: c.slug }}
                 className="group relative block aspect-[3/4] overflow-hidden"
               >
                 <img
@@ -285,7 +289,7 @@ function Home() {
                     Shop Now <span>——→</span>
                   </p>
                 </div>
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -477,46 +481,19 @@ function Home() {
         </span>
       </section>
 
-      {/* FOOTER */}
-      <footer id="contact" className="bg-walnut text-walnut-foreground">
-        <div className="mx-auto w-full max-w-[1600px] border-t border-walnut-foreground/15 px-6 py-20 sm:px-10">
-          <div className="grid gap-14 md:grid-cols-[1fr_auto_auto]">
-            <div>
-              <Logo />
-            </div>
-            <div className="md:pr-16">
-              <p className="label-track opacity-60">Shop</p>
-              <ul className="mt-5 space-y-2 text-[15px] opacity-80">
-                <li>Incense Sticks</li>
-                <li>Incense Cones</li>
-                <li>Dhoop Sticks</li>
-              </ul>
-            </div>
-            <div>
-              <p className="label-track opacity-60">Maison</p>
-              <ul className="mt-5 space-y-2 text-[15px] opacity-80">
-                <li>Journal</li>
-                <li>About Us</li>
-                <li>Contact Us</li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-16 flex flex-col gap-3 border-t border-walnut-foreground/15 pt-8 text-[13px] opacity-55 sm:flex-row sm:items-center sm:justify-between">
-            <span>© {new Date().getFullYear()} Auriva</span>
-            <span className="italic">from petal to presence</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
 
 function ProductCard({
+  slug,
   name,
   descriptor,
   price,
   img,
 }: {
+  slug: string;
   name: string;
   descriptor: string;
   price: string;
@@ -536,12 +513,13 @@ function ProductCard({
         <h3 className="font-display text-[20px]">{name}</h3>
         <p className="mt-2 text-[14px] leading-[1.7] text-muted-foreground">{descriptor}</p>
         <p className="mt-4 text-[15px]">{price}</p>
-        <button
-          type="button"
+        <Link
+          to="/product/$slug"
+          params={{ slug }}
           className="label-track mt-6 inline-flex items-center gap-2 border-b border-foreground/30 pb-1 transition-opacity duration-500 hover:opacity-60"
         >
           <BagIcon className="h-4 w-4" /> Shop Now
-        </button>
+        </Link>
       </div>
     </article>
   );
