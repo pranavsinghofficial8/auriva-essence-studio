@@ -111,7 +111,7 @@ function useInView(ref: React.RefObject<HTMLElement | null>, threshold = 0.3) {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([e]) => e.isIntersecting && setSeen(true),
+      (entries) => entries[0]?.isIntersecting && setSeen(true),
       { threshold },
     );
     io.observe(el);
@@ -186,6 +186,7 @@ function SmokeField({ dark = false }: { dark?: boolean }) {
       }
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
+        if (!p) continue;
         p.x += p.vx + Math.sin((p.y + t * 60) * 0.01) * 0.25;
         p.y += p.vy;
         p.vy *= 0.995;
@@ -237,7 +238,7 @@ const chapters = [
 ];
 
 function ChapterTracker({ progress }: { progress: [number, number, number] }) {
-  const active = progress[2] > 0 ? 2 : progress[1] > 0 ? 1 : 0;
+  const active = (progress[2] ?? 0) > 0 ? 2 : (progress[1] ?? 0) > 0 ? 1 : 0;
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -268,11 +269,11 @@ function ChapterTracker({ progress }: { progress: [number, number, number] }) {
               <span className="relative hidden h-px flex-1 bg-border sm:block">
                 <span
                   className="absolute inset-y-0 left-0 bg-gold transition-[width] duration-200"
-                  style={{ width: `${progress[i] * 100}%` }}
+                  style={{ width: `${(progress[i] ?? 0) * 100}%` }}
                 />
                 <span
                   className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-gold transition-[left] duration-200"
-                  style={{ left: `calc(${progress[i] * 100}% - 3px)` }}
+                  style={{ left: `calc(${(progress[i] ?? 0) * 100}% - 3px)` }}
                 />
               </span>
             ) : null}
