@@ -7,26 +7,26 @@ export function Footer() {
       <div className="mx-auto w-full max-w-[1600px] border-t border-walnut-foreground/15 px-6 py-20 sm:px-10">
         <div className="grid gap-14 md:grid-cols-[1fr_auto_auto]">
           <div>
-            <Logo />
+            <Logo light className="items-start" />
           </div>
           <div className="md:pr-16">
             <p className="label-track opacity-60">Shop</p>
             <ul className="mt-5 space-y-2 text-[15px] opacity-80">
-              <li>
-                <Link to="/shop/incense-sticks" className="hover:opacity-60">
-                  Incense Sticks
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/incense-cones" className="hover:opacity-60">
-                  Incense Cones
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop/bambooless-sticks" className="hover:opacity-60">
-                  Bambooless Sticks
-                </Link>
-              </li>
+              {[
+                { slug: "incense-sticks", label: "Incense Sticks" },
+                { slug: "incense-cones", label: "Incense Cones" },
+                { slug: "bambooless-sticks", label: "Bambooless Sticks" },
+              ].map((c) => (
+                <li key={c.slug}>
+                  <Link
+                    to="/shop/$category"
+                    params={{ category: c.slug }}
+                    className="hover:opacity-60"
+                  >
+                    {c.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
           <div>

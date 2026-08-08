@@ -64,7 +64,7 @@ export function Nav({ threshold }: { threshold?: number }) {
         </div>
 
         <Link to="/" className="flex justify-center">
-          <Logo tagline={false} />
+          <Logo tagline={false} light={!solid} />
         </Link>
 
         <div className="flex items-center justify-end gap-6">
