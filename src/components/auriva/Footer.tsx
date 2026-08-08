@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto w-full max-w-[1600px] border-t border-walnut-foreground/15 px-6 py-20 sm:px-10">
         <div className="grid gap-14 md:grid-cols-[1fr_auto_auto]">
           <div>
-            <Logo />
+            <Logo light className="items-start" />
           </div>
           <div className="md:pr-16">
             <p className="label-track opacity-60">Shop</p>
