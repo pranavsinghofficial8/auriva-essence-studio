@@ -55,6 +55,11 @@
   --color-stone: var(--stone);
   --color-stone-deep: var(--stone-deep);
   --color-taupe: var(--taupe);
+  --color-gold: var(--gold);
+  --color-espresso: var(--espresso);
+  --color-espresso-foreground: var(--espresso-foreground);
+  --color-parchment: var(--parchment);
+  --color-sand: var(--sand);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -78,6 +83,11 @@
   --stone: oklch(0.9046 0.0142 92.5);
   --stone-deep: oklch(0.8617 0.0203 82);
   --taupe: oklch(0.7676 0.0359 92);
+  --gold: oklch(0.7718 0.0445 89.4);
+  --espresso: oklch(0.2934 0.0091 53.1);
+  --espresso-foreground: oklch(0.8741 0.018 73.1);
+  --parchment: oklch(0.9619 0.0146 102.5);
+  --sand: oklch(0.9106 0.0157 86.4);
   --walnut: oklch(0.2811 0.0107 55);
   --walnut-foreground: oklch(0.9834 0.0195 110.5);
   --background: oklch(0.9834 0.0195 110.5);
