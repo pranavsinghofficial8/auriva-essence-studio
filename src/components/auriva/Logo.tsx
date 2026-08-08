@@ -1,15 +1,25 @@
-export function Logo({ tagline = true }: { tagline?: boolean }) {
+import logoDark from "@/assets/auriva-logo.png.asset.json";
+import logoLight from "@/assets/auriva-logo-light.png.asset.json";
+
+export function Logo({
+  tagline = true,
+  light = false,
+  className = "",
+}: {
+  tagline?: boolean;
+  light?: boolean;
+  className?: string;
+}) {
   return (
-    <div className="flex flex-col items-center leading-none select-none">
-      <span className="block h-px w-[4.6rem] bg-current opacity-70 sm:w-[5.4rem]" />
-      <span
-        className="mt-1.5 font-display text-[26px] tracking-[0.18em] sm:text-[30px]"
-        style={{ fontFamily: "var(--font-display)" }}
-      >
-        auriva
-      </span>
+    <div className={`flex select-none flex-col items-center leading-none ${className}`}>
+      <img
+        src={light ? logoLight.url : logoDark.url}
+        alt="Auriva"
+        className="h-9 w-auto sm:h-11"
+        draggable={false}
+      />
       {tagline ? (
-        <span className="mt-1 text-[8.5px] tracking-[0.34em] opacity-60 sm:text-[9px]">
+        <span className="mt-2 text-[8.5px] tracking-[0.34em] opacity-60 sm:text-[9px]">
           from petal to presence
         </span>
       ) : null}
