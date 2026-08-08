@@ -33,12 +33,12 @@ export function Footer() {
             <p className="label-track opacity-60">Maison</p>
             <ul className="mt-5 space-y-2 text-[15px] opacity-80">
               <li>
-                <Link to="/" hash="journal" className="hover:opacity-60">
+                <Link to="/journal" className="hover:opacity-60">
                   Journal
                 </Link>
               </li>
               <li>
-                <Link to="/" hash="about" className="hover:opacity-60">
+                <Link to="/about" className="hover:opacity-60">
                   About Us
                 </Link>
               </li>

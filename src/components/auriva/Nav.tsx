@@ -19,8 +19,8 @@ const menu: {
       { label: "Bambooless Sticks", to: "/shop/bambooless-sticks" },
     ],
   },
-  { label: "Journal", to: "/", hash: "journal" },
-  { label: "About Us", to: "/", hash: "about" },
+  { label: "Journal", to: "/journal" },
+  { label: "About Us", to: "/about" },
   { label: "Contact Us", to: "/", hash: "contact" },
 ];
 

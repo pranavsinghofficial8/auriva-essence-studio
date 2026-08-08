@@ -2,7 +2,7 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { getJournalPost, journalPosts } from "@/lib/auriva-journal";
+import { getJournalPost, journalPosts, type JournalPost } from "@/lib/auriva-journal";
 
 export const Route = createFileRoute("/journal/$slug")({
   loader: ({ params }) => {
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/journal/$slug")({
 });
 
 function JournalArticle() {
-  const { post } = Route.useLoaderData();
+  const { post } = Route.useLoaderData() as { post: JournalPost };
   const others = journalPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
 
   return (
