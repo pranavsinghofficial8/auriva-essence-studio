@@ -195,19 +195,19 @@ function Home() {
 
         <div className="absolute inset-x-0 bottom-[14vh] flex flex-col items-center px-6 text-center text-walnut-foreground">
           <p className="animate-rise label-track opacity-80" style={{ letterSpacing: "0.3em" }}>
-            Auriva
+            
           </p>
           <h1
             className="animate-rise mt-6 max-w-3xl text-[34px] leading-[1.25] font-light sm:text-[48px]"
             style={{ animationDelay: "160ms" }}
           >
-            A Collection of Everyday Rituals
+            a collection of everyday rituals
           </h1>
           <p
             className="animate-rise label-track mt-6 opacity-75"
             style={{ animationDelay: "300ms" }}
           >
-            Enter Your Ritual
+            
           </p>
           <a
             href="#collection"
