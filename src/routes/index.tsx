@@ -204,14 +204,14 @@ function Home() {
             a collection of everyday rituals
           </h1>
           <p
-            className="animate-rise label-track mt-6 opacity-75"
+            className="animate-rise label-track mt-2 opacity-75"
             style={{ animationDelay: "300ms" }}
           >
             
           </p>
           <a
             href="#collection"
-            className="animate-rise label-track mt-10 border border-current/70 px-10 py-4 transition-all duration-500 hover:border-current hover:shadow-[0_0_28px_rgba(255,255,255,0.28)]"
+            className="animate-rise label-track mt-6 border border-current/70 px-10 py-4 transition-all duration-500 hover:border-current hover:shadow-[0_0_28px_rgba(255,255,255,0.28)]"
             style={{ animationDelay: "440ms" }}
           >
             Enter the Ritual
