@@ -146,7 +146,10 @@ function ProductPage() {
       </section>
 
       {/* AURA BAND */}
-      <section className="relative overflow-hidden bg-walnut text-walnut-foreground">
+      <section
+        id="ritual"
+        className="relative scroll-mt-24 overflow-hidden bg-espresso text-espresso-foreground"
+      >
         <img
           src={category.banner}
           alt=""
