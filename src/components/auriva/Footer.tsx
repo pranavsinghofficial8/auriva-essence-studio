@@ -43,10 +43,16 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/" hash="contact" className="hover:opacity-60">
+                <Link to="/contact" className="hover:opacity-60">
                   Contact Us
                 </Link>
               </li>
+              <li>
+                <Link to="/auth" className="hover:opacity-60">
+                  Sign In
+                </Link>
+              </li>
+
             </ul>
           </div>
         </div>
