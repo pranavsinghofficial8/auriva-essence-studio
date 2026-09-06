@@ -69,19 +69,23 @@ export function Nav({ threshold }: { threshold?: number }) {
 
         <div className="flex items-center justify-end gap-6">
           <Link
-            to="/shop"
+            to={account ? "/account" : "/auth"}
             className="label-track hidden transition-opacity duration-300 hover:opacity-60 sm:inline"
           >
-            Shop
+            {account ? account.name.split(" ")[0].toLowerCase() : "sign in"}
           </Link>
-          <button
-            type="button"
+          <Link
+            to="/cart"
             aria-label="Shopping bag"
-            className="transition-opacity duration-300 hover:opacity-60"
+            className="relative transition-opacity duration-300 hover:opacity-60"
           >
             <BagIcon className="h-5 w-5" />
-          </button>
+            {count > 0 ? (
+              <span className="absolute -right-2 -top-1 text-[10px] tabular-nums">{count}</span>
+            ) : null}
+          </Link>
         </div>
+
       </div>
 
       <div
