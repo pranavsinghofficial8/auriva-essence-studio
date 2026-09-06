@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { BagIcon } from "./marks";
+import { useAccount, useBag } from "@/lib/auriva-store";
 
 const menu: {
   label: string;
@@ -9,24 +10,28 @@ const menu: {
   hash?: string;
   children?: { label: string; to: string }[];
 }[] = [
-  { label: "Home", to: "/" },
+  { label: "home", to: "/" },
   {
-    label: "Shop",
+    label: "shop",
     to: "/shop",
     children: [
-      { label: "Incense Sticks", to: "/shop/incense-sticks" },
-      { label: "Incense Cones", to: "/shop/incense-cones" },
-      { label: "Bambooless Sticks", to: "/shop/bambooless-sticks" },
+      { label: "incense sticks", to: "/shop/incense-sticks" },
+      { label: "incense cones", to: "/shop/incense-cones" },
+      { label: "bambooless sticks", to: "/shop/bambooless-sticks" },
     ],
   },
-  { label: "Journal", to: "/journal" },
-  { label: "About Us", to: "/about" },
-  { label: "Contact Us", to: "/", hash: "contact" },
+  { label: "journal", to: "/journal" },
+  { label: "about us", to: "/about" },
+  { label: "contact us", to: "/contact" },
 ];
 
 export function Nav({ threshold }: { threshold?: number }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const { count } = useBag();
+  const account = useAccount();
+
+
 
   useEffect(() => {
     const onScroll = () =>
