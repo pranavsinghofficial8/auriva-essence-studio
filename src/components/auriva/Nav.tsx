@@ -77,7 +77,7 @@ export function Nav({ threshold }: { threshold?: number }) {
             to={account ? "/account" : "/auth"}
             className="label-track hidden transition-opacity duration-300 hover:opacity-60 sm:inline"
           >
-            {account ? account.name.split(" ")[0].toLowerCase() : "sign in"}
+            {account ? (account.name.split(" ")[0] ?? account.name).toLowerCase() : "sign in"}
           </Link>
           <Link
             to="/cart"
