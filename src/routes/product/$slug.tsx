@@ -140,10 +140,21 @@ function ProductPage() {
           <div className="mt-12 flex max-w-md flex-col gap-4">
             <button
               type="button"
+              onClick={onAdd}
+              aria-live="polite"
               className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85"
             >
-              <BagIcon className="h-4 w-4" /> Add to Bag
+              <BagIcon className="h-4 w-4" />
+              {added ? "Added to Bag" : account ? "Add to Bag" : "Sign in to Add"}
             </button>
+            {added ? (
+              <Link
+                to="/cart"
+                className="label-track text-center text-muted-foreground transition-colors duration-500 hover:text-foreground"
+              >
+                view your bag →
+              </Link>
+            ) : null}
             <Link
               to="/shop/$category"
               params={{ category: category.slug }}
