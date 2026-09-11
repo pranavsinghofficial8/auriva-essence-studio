@@ -53,6 +53,20 @@ function ProductPage() {
     category: Category;
     related: Product[];
   };
+  const account = useAccount();
+  const navigate = useNavigate();
+  const [added, setAdded] = useState(false);
+
+  const onAdd = () => {
+    if (!account) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    addToBag(product.slug, 1);
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 2400);
+  };
+
 
   return (
     <div className="bg-background">
