@@ -1,4 +1,6 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { useState } from "react";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { addToBag, useAccount } from "@/lib/auriva-store";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
 import { AuraGlyph } from "@/components/auriva/aura-marks";
@@ -51,6 +53,20 @@ function ProductPage() {
     category: Category;
     related: Product[];
   };
+  const account = useAccount();
+  const navigate = useNavigate();
+  const [added, setAdded] = useState(false);
+
+  const onAdd = () => {
+    if (!account) {
+      navigate({ to: "/auth" });
+      return;
+    }
+    addToBag(product.slug, 1);
+    setAdded(true);
+    window.setTimeout(() => setAdded(false), 2400);
+  };
+
 
   return (
     <div className="bg-background">
@@ -124,10 +140,21 @@ function ProductPage() {
           <div className="mt-12 flex max-w-md flex-col gap-4">
             <button
               type="button"
+              onClick={onAdd}
+              aria-live="polite"
               className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85"
             >
-              <BagIcon className="h-4 w-4" /> Add to Bag
+              <BagIcon className="h-4 w-4" />
+              {added ? "Added to Bag" : account ? "Add to Bag" : "Sign in to Add"}
             </button>
+            {added ? (
+              <Link
+                to="/cart"
+                className="label-track text-center text-muted-foreground transition-colors duration-500 hover:text-foreground"
+              >
+                view your bag →
+              </Link>
+            ) : null}
             <Link
               to="/shop/$category"
               params={{ category: category.slug }}

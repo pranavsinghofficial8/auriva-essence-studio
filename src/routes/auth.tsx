@@ -31,7 +31,7 @@ function AuthPage() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    signIn({ name: name.trim() || email.split("@")[0], email: email.trim() });
+    signIn({ name: name.trim() || email.split("@")[0] || "friend", email: email.trim() });
     navigate({ to: "/cart" });
   };
 

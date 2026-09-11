@@ -34,7 +34,7 @@ function ConfirmationPage() {
       <main className="mx-auto w-full max-w-[1000px] px-6 pt-40 pb-28 text-center sm:px-10 sm:pt-52">
         <p className="label-track text-taupe">order confirmed</p>
         <h1 className="mt-8 text-[40px] leading-[1.05] lowercase sm:text-[68px]">
-          thank you, {order?.name?.split(" ")[0].toLowerCase() ?? "friend"}
+          thank you, {order?.name?.split(" ")[0]?.toLowerCase() ?? "friend"}
         </h1>
         <p className="mx-auto mt-8 max-w-lg text-muted-foreground">
           A quiet hour is on its way. We hand-pack every order in the studio, so allow two days
