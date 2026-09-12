@@ -31,11 +31,11 @@ function ShopIndex() {
     <div className="bg-background">
       <Nav threshold={80} />
 
-      <section className="px-6 pt-40 pb-20 sm:px-10 sm:pt-52 sm:pb-28">
+      <section className="bg-ivory px-6 pt-40 pb-20 sm:px-10 sm:pt-52 sm:pb-28">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="label-track text-muted-foreground">The Collection</p>
-          <h1 className="mt-6 font-display text-[34px] leading-[1.2] sm:text-[48px]">
-            Three forms. Ten fragrances. One philosophy.
+          <p className="label-track text-muted-foreground">the collection</p>
+          <h1 className="mt-6 font-display text-[38px] leading-[1.15] lowercase sm:text-[62px]">
+            three forms. ten fragrances. one philosophy.
           </h1>
           <p className="mt-6 text-[17px] leading-[1.9] text-muted-foreground">
             Every Auriva blend begins with flowers renewed rather than discarded, and ends with
@@ -44,14 +44,14 @@ function ShopIndex() {
         </div>
       </section>
 
-      <div className="mx-auto w-full max-w-[1600px] px-6 pb-28 sm:px-10">
+      <div className="mx-auto w-full max-w-[1600px] bg-parchment px-6 py-24 sm:px-10 sm:py-28">
         <div className="grid gap-px bg-stone-deep lg:grid-cols-3">
           {categories.map((c) => (
             <Link
               key={c.slug}
               to="/shop/$category"
               params={{ category: c.slug }}
-              className="group flex flex-col bg-background"
+              className="group flex flex-col bg-ivory transition-colors duration-[900ms] hover:bg-stone"
             >
               <div className="aspect-[4/5] overflow-hidden">
                 <img
@@ -63,7 +63,7 @@ function ShopIndex() {
               </div>
               <div className="px-7 py-9">
                 <p className="label-track text-muted-foreground">{c.eyebrow}</p>
-                <h2 className="mt-2 font-display text-[26px]">{c.name}</h2>
+                <h2 className="mt-2 font-display text-[26px] lowercase">{c.name}</h2>
                 <p className="mt-4 text-[15px] leading-[1.8] text-muted-foreground">{c.intro}</p>
                 <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
                   {productsIn(c.slug).map((p) => (

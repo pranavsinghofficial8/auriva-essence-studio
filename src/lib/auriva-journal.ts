@@ -1,7 +1,7 @@
-import journalMood from "@/assets/journal-mood.jpg";
-import journalLineup from "@/assets/journal-lineup.jpg";
-import journalTime from "@/assets/journal-time.jpg";
-import journalCultures from "@/assets/journal-cultures.jpg";
+import journalMorning from "@/assets/journal-morning.jpg";
+import journalDesk from "@/assets/journal-desk.jpg";
+import journalReset from "@/assets/journal-reset.jpg";
+import journalDinner from "@/assets/journal-dinner.jpg";
 import journalHowto from "@/assets/journal-howto.jpg";
 
 export type JournalPost = {
@@ -18,12 +18,12 @@ export type JournalPost = {
 export const journalPosts: JournalPost[] = [
   {
     slug: "which-auriva-scent-matches-your-mood",
-    title: "Which Auriva scent matches your mood?",
+    title: "A five-minute ritual before the day begins",
     excerpt:
       "A quick, personal guide to picking a fragrance based on how you want to feel.",
-    category: "Guide",
+    category: "Morning",
     readTime: "4 min",
-    image: journalMood,
+    image: journalMorning,
     intro:
       "Choose incense the way you would choose music for a room — not by the name of the note, but by the feeling you want to be left with.",
     sections: [
@@ -56,12 +56,12 @@ export const journalPosts: JournalPost[] = [
   },
   {
     slug: "a-guide-to-aurivas-10-fragrances",
-    title: "A guide to Auriva's 10 fragrances",
+    title: "The quiet transition from work to home",
     excerpt:
       "The full lineup, one by one — the aura, ritual, and inspiration behind each scent.",
-    category: "The Collection",
+    category: "Evening",
     readTime: "7 min",
-    image: journalLineup,
+    image: journalDesk,
     intro:
       "Ten blends across three formats — incense sticks, cones and bambooless sticks. Each one carries an aura: the quality it is made to support.",
     sections: [
@@ -94,11 +94,11 @@ export const journalPosts: JournalPost[] = [
   },
   {
     slug: "morning-midday-night-how-to-time-your-incense",
-    title: "Morning, midday, night: how to time your incense",
+    title: "A midday reset for crowded thoughts",
     excerpt: "How to build incense into different moments of the day.",
     category: "Ritual",
     readTime: "5 min",
-    image: journalTime,
+    image: journalReset,
     intro:
       "Incense is most useful when it marks a transition — the line between one part of the day and the next.",
     sections: [
@@ -125,11 +125,11 @@ export const journalPosts: JournalPost[] = [
   },
   {
     slug: "japan-france-india-three-ways-the-world-burns-incense",
-    title: "Japan, France, India: three ways the world burns incense",
+    title: "Setting the table for unhurried company",
     excerpt: "The mind, heart and soul cultural history behind Auriva.",
-    category: "Heritage",
+    category: "Gathering",
     readTime: "6 min",
-    image: journalCultures,
+    image: journalDinner,
     intro:
       "Fragrance has meant something different everywhere it has been practiced. Auriva was built by borrowing from three traditions — which is why it doesn't belong to just one place.",
     sections: [
