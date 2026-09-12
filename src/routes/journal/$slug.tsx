@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
@@ -62,17 +63,18 @@ export const Route = createFileRoute("/journal/$slug")({
 function JournalArticle() {
   const { post } = Route.useLoaderData() as { post: JournalPost };
   const others = journalPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
+  const [shared, setShared] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
       <Nav threshold={80} />
 
       <main>
-        <article className="mx-auto w-full max-w-[820px] px-6 pt-36 pb-8 sm:px-10 sm:pt-44">
+        <article className="mx-auto w-full max-w-[820px] bg-ivory px-6 pt-40 pb-12 sm:px-10 sm:pt-48">
           <p className="label-track text-muted-foreground">
             {post.category} · {post.readTime} read
           </p>
-          <h1 className="mt-6 text-[34px] leading-[1.1] sm:text-[52px]">{post.title}</h1>
+          <h1 className="mt-6 text-[38px] leading-[1.1] lowercase sm:text-[58px]">{post.title}</h1>
           <p className="mt-6 text-[18px] text-muted-foreground italic">{post.intro}</p>
         </article>
 
@@ -90,7 +92,7 @@ function JournalArticle() {
         <div className="mx-auto w-full max-w-[820px] px-6 py-16 sm:px-10 sm:py-24">
           {post.sections.map((s) => (
             <section key={s.heading} className="mb-14 last:mb-0">
-              <h2 className="text-[24px] leading-snug sm:text-[30px]">{s.heading}</h2>
+              <h2 className="text-[26px] leading-snug lowercase sm:text-[34px]">{s.heading}</h2>
               <div className="mt-5 space-y-5">
                 {s.body.map((b, i) => (
                   <p key={i}>{b}</p>
@@ -107,6 +109,20 @@ function JournalArticle() {
               Shop the collection →
             </Link>
           </div>
+
+          <section className="mt-20 bg-stone p-8 sm:p-12">
+            <p className="label-track text-muted-foreground">your ritual</p>
+            <h2 className="mt-5 text-[28px] lowercase">what moment do you return to?</h2>
+            {shared ? (
+              <p className="mt-8 text-[18px] lowercase">thank you for sharing it with us.</p>
+            ) : (
+              <form onSubmit={(event) => { event.preventDefault(); setShared(true); }} className="mt-8 space-y-6">
+                <input required name="name" aria-label="Name" placeholder="name" className="w-full border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none placeholder:text-muted-foreground focus:border-foreground" />
+                <textarea required name="story" aria-label="Your ritual or story" placeholder="your ritual or story" rows={3} className="w-full resize-none border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none placeholder:text-muted-foreground focus:border-foreground" />
+                <button type="submit" className="label-track border border-foreground/40 px-8 py-4 transition-colors duration-700 hover:bg-foreground hover:text-background">share your ritual</button>
+              </form>
+            )}
+          </section>
         </div>
 
         <section className="border-t border-border bg-mist py-20">

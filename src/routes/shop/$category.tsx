@@ -50,7 +50,7 @@ function CategoryPage() {
 
   return (
     <div className="bg-background">
-      <Nav />
+      <Nav overlay="light" />
 
       {/* 1 — BANNER */}
       <section className="relative h-[78svh] min-h-[520px] w-full overflow-hidden">
@@ -61,7 +61,7 @@ function CategoryPage() {
           height={1088}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-black/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-espresso/60 via-espresso/10 to-espresso/25" />
         <div className="absolute inset-x-0 bottom-[12vh] flex flex-col items-center px-6 text-center text-walnut-foreground">
           <p className="animate-rise label-track opacity-80">{category.eyebrow}</p>
           <h1
@@ -187,7 +187,7 @@ function CategoryPage() {
                   loading="lazy"
                   className="h-full w-full object-cover transition-transform duration-[900ms] ease-out group-hover:scale-[1.04]"
                 />
-                <div className="absolute inset-0 bg-black/35" />
+                <div className="absolute inset-0 bg-espresso/40" />
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-walnut-foreground">
                   <p className="label-track opacity-75">{c.eyebrow}</p>
                   <h3 className="mt-2 font-display text-[24px]">{c.name}</h3>

@@ -25,7 +25,13 @@ const menu: {
   { label: "contact us", to: "/contact" },
 ];
 
-export function Nav({ threshold }: { threshold?: number }) {
+export function Nav({
+  threshold,
+  overlay = "dark",
+}: {
+  threshold?: number;
+  overlay?: "dark" | "light";
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const { count } = useBag();
@@ -41,14 +47,15 @@ export function Nav({ threshold }: { threshold?: number }) {
     return () => window.removeEventListener("scroll", onScroll);
   }, [threshold]);
 
-  const solid = scrolled || open;
+  const solid = threshold !== undefined || scrolled || open;
+  const overlayText = overlay === "light" ? "text-walnut-foreground" : "text-foreground";
 
   return (
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-out ${
         solid
           ? "bg-background text-foreground border-b border-border/60"
-          : "bg-transparent text-walnut-foreground"
+          : `bg-transparent ${overlayText}`
       }`}
     >
       <div className="mx-auto grid h-20 w-full max-w-[1600px] grid-cols-3 items-center px-6 sm:h-24 sm:px-10">
@@ -69,7 +76,7 @@ export function Nav({ threshold }: { threshold?: number }) {
         </div>
 
         <Link to="/" className="flex justify-center">
-          <Logo tagline={false} light={!solid} />
+          <Logo tagline={false} light={!solid && overlay === "light"} />
         </Link>
 
         <div className="flex items-center justify-end gap-6">

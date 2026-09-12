@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
@@ -28,24 +29,26 @@ export const Route = createFileRoute("/journal/")({
 });
 
 function JournalIndex() {
+  const [shared, setShared] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       <Nav threshold={80} />
 
-      <main className="mx-auto w-full max-w-[1600px] px-6 pt-36 pb-24 sm:px-10 sm:pt-44 sm:pb-32">
-        <header className="text-center">
-          <p className="label-track text-muted-foreground">Journal</p>
-          <h1 className="mt-6 text-[38px] leading-[1.05] sm:text-[64px]">
-            Notes on scent &amp; slower days
+      <main>
+        <header className="bg-ivory px-6 pt-40 pb-24 text-center sm:px-10 sm:pt-52 sm:pb-32">
+          <p className="label-track text-muted-foreground">journal</p>
+          <h1 className="mx-auto mt-7 max-w-4xl text-[42px] leading-[1.08] lowercase sm:text-[72px]">
+            notes for a slower life
           </h1>
-          <p className="mx-auto mt-6 max-w-xl text-muted-foreground">
-            Short readings on fragrance, ritual and the traditions Auriva is built from.
+          <p className="mx-auto mt-7 max-w-xl text-muted-foreground">
+            Everyday rituals for the spaces between waking, working, gathering and rest.
           </p>
         </header>
 
-        <div className="mt-20 grid gap-x-8 gap-y-16 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="grid gap-px bg-stone-deep px-px pb-px sm:grid-cols-2 lg:grid-cols-3">
           {journalPosts.map((post) => (
-            <article key={post.slug} className="group">
+            <article key={post.slug} className="group bg-parchment p-6 pb-10 sm:p-8">
               <Link to="/journal/$slug" params={{ slug: post.slug }} className="block">
                 <div className="overflow-hidden bg-mist">
                   <img
@@ -57,17 +60,53 @@ function JournalIndex() {
                     className="aspect-[4/3] w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
                   />
                 </div>
-                <p className="label-track mt-6 text-muted-foreground">
+                <p className="label-track mt-7 text-muted-foreground">
                   {post.category} · {post.readTime}
                 </p>
-                <h2 className="mt-3 text-[22px] leading-snug transition-opacity duration-300 group-hover:opacity-60">
+                <h2 className="mt-3 text-[24px] leading-snug lowercase transition-opacity duration-700 group-hover:opacity-60">
                   {post.title}
                 </h2>
                 <p className="mt-3 text-[15px] text-muted-foreground">{post.excerpt}</p>
               </Link>
             </article>
           ))}
-        </div>
+        </section>
+
+        <section className="bg-stone px-6 py-24 sm:px-10 sm:py-32">
+          <div className="mx-auto grid max-w-[1200px] gap-12 lg:grid-cols-[1fr_1.15fr] lg:gap-24">
+            <div>
+              <p className="label-track text-muted-foreground">your ritual</p>
+              <h2 className="mt-6 max-w-lg text-[34px] leading-tight lowercase sm:text-[48px]">
+                tell us about the moment you return to.
+              </h2>
+            </div>
+            {shared ? (
+              <div className="flex items-center border-l border-taupe pl-8 text-[22px] lowercase">
+                thank you. your ritual is now part of ours.
+              </div>
+            ) : (
+              <form
+                className="space-y-8"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  setShared(true);
+                }}
+              >
+                <label className="block">
+                  <span className="label-track text-muted-foreground">name</span>
+                  <input required name="name" className="mt-3 w-full border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none focus:border-foreground" />
+                </label>
+                <label className="block">
+                  <span className="label-track text-muted-foreground">your ritual or story</span>
+                  <textarea required name="story" rows={4} className="mt-3 w-full resize-none border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none focus:border-foreground" />
+                </label>
+                <button type="submit" className="label-track border border-foreground/40 px-9 py-4 transition-colors duration-700 hover:bg-foreground hover:text-background">
+                  share your ritual
+                </button>
+              </form>
+            )}
+          </div>
+        </section>
       </main>
 
       <Footer />
