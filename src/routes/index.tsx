@@ -9,6 +9,8 @@ import heroLotus from "@/assets/hero-lotus.jpg";
 import gridEmber from "@/assets/grid-ember.jpg";
 import gridAsh from "@/assets/grid-ash.jpg";
 import gridSmoke from "@/assets/grid-smoke.jpg";
+import gridPetals from "@/assets/grid-petals.jpg";
+import gridCones from "@/assets/grid-cones.jpg";
 import collSticks from "@/assets/coll-sticks.jpg";
 import collCones from "@/assets/coll-cones.jpg";
 import collBambooless from "@/assets/coll-bambooless.jpg";
@@ -207,20 +209,8 @@ function Home() {
           height={1280}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div
-          className="animate-drift pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(38% 46% at 52% 58%, rgba(250,251,244,0.55), rgba(250,251,244,0) 72%)",
-          }}
-        />
-        <div
-          className="animate-breathe pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(30% 34% at 34% 40%, rgba(255,255,255,0.35), rgba(255,255,255,0) 70%)",
-          }}
-        />
+        <div className="animate-drift pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_52%_58%,color-mix(in_oklab,var(--ivory)_55%,transparent),transparent_48%)]" />
+        <div className="animate-breathe pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_34%_40%,color-mix(in_oklab,var(--ivory)_38%,transparent),transparent_38%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-ivory/40 via-transparent to-ivory/55" />
 
         <div className="absolute inset-x-0 bottom-[13vh] flex flex-col items-center px-6 text-center text-espresso">
@@ -240,7 +230,7 @@ function Home() {
       {/* 2 — STORY GRID */}
       <section
         id="philosophy"
-        className="grid scroll-mt-24 grid-cols-1 gap-px bg-stone-deep sm:grid-cols-2 lg:grid-cols-3"
+        className="grid scroll-mt-24 grid-cols-1 gap-px bg-stone-deep sm:grid-cols-2 lg:grid-cols-4"
       >
         <PhotoTile src={gridEmber} alt="An incense stick glowing at the ember" />
         <TextTile
@@ -253,6 +243,7 @@ function Home() {
           tone="bg-ivory hover:bg-parchment"
         />
         <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" />
+        <PhotoTile src={gridPetals} alt="Renewed flower petals in warm morning light" />
         <TextTile
           Icon={PetalMark}
           heading="crafted with purpose."
@@ -263,6 +254,7 @@ function Home() {
           tone="bg-parchment hover:bg-stone"
         />
         <PhotoTile src={gridAsh} alt="Ash gathered beneath a burning incense stick" />
+        <PhotoTile src={gridCones} alt="Incense cones resting beside a ribbon of smoke" />
         <TextTile
           Icon={SmokeMark}
           heading="from petal to presence."
@@ -456,27 +448,27 @@ function Home() {
               to="/product/$slug"
               params={{ slug: r.product }}
               hash="ritual"
-              className="group relative block h-[380px] overflow-hidden bg-parchment"
+                className="group relative block h-[420px] overflow-hidden bg-parchment text-ivory"
             >
               <img
                 src={r.img}
                 alt={`${r.title} ritual mood`}
                 loading="lazy"
-                className="absolute inset-0 h-full w-full scale-105 object-cover opacity-0 transition-all duration-[1100ms] ease-out group-hover:scale-100 group-hover:opacity-100"
+                className="absolute inset-0 h-full w-full scale-105 object-cover opacity-100 transition-all duration-[1100ms] ease-out group-hover:scale-100"
               />
-              <div className="absolute inset-0 bg-espresso/0 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/55" />
+              <div className="absolute inset-0 bg-espresso/55 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/70" />
 
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center transition-colors duration-[1100ms] group-hover:text-ivory">
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
                 <SigilMark
                   variant={i}
-                  className="h-14 w-14 text-taupe transition-transform duration-[1100ms] ease-out group-hover:-translate-y-2"
+                  className="h-14 w-14 text-stone transition-transform duration-[1100ms] ease-out group-hover:-translate-y-2"
                 />
                 <h3 className="mt-8 font-display text-[26px] lowercase">{r.title}</h3>
                 <p className="mt-2 italic opacity-70">{r.subtitle}</p>
-                <p className="mt-5 max-w-xs text-[15px] leading-[1.8] opacity-0 transition-opacity duration-[1100ms] ease-out group-hover:opacity-90">
+                <p className="mt-5 max-w-xs text-[15px] leading-[1.8] opacity-85 transition-opacity duration-[1100ms] ease-out sm:opacity-0 sm:group-hover:opacity-90">
                   {r.body}
                 </p>
-                <span className="label-track mt-8 opacity-0 transition-opacity duration-[1100ms] group-hover:opacity-100">
+                <span className="label-track mt-8 opacity-80 transition-opacity duration-[1100ms] sm:opacity-0 sm:group-hover:opacity-100">
                   explore ritual →
                 </span>
               </div>
