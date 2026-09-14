@@ -209,6 +209,11 @@ function Home() {
           height={1280}
           className="absolute inset-0 h-full w-full object-cover"
         />
+        <div className="hero-smoke pointer-events-none absolute inset-0" aria-hidden="true">
+          <span className="hero-smoke-plume hero-smoke-plume-one" />
+          <span className="hero-smoke-plume hero-smoke-plume-two" />
+          <span className="hero-smoke-plume hero-smoke-plume-three" />
+        </div>
         <div className="animate-drift pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_52%_58%,color-mix(in_oklab,var(--ivory)_55%,transparent),transparent_48%)]" />
         <div className="animate-breathe pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_34%_40%,color-mix(in_oklab,var(--ivory)_38%,transparent),transparent_38%)]" />
         <div className="absolute inset-0 bg-gradient-to-b from-ivory/40 via-transparent to-ivory/55" />

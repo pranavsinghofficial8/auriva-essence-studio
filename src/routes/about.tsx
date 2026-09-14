@@ -76,22 +76,45 @@ function useIsMobile() {
 function useSectionProgress(ref: React.RefObject<HTMLElement | null>) {
   const [p, setP] = useState(0);
   useEffect(() => {
-    let frame = 0;
+    let measureFrame = 0;
+    let easingFrame = 0;
+    let current = 0;
+    let target = 0;
+
+    const easeTowardTarget = () => {
+      const distance = target - current;
+      if (Math.abs(distance) < 0.00015) {
+        current = target;
+        setP(current);
+        easingFrame = 0;
+        return;
+      }
+      current += distance * 0.14;
+      setP(current);
+      easingFrame = requestAnimationFrame(easeTowardTarget);
+    };
+
+    const startEasing = () => {
+      if (!easingFrame) easingFrame = requestAnimationFrame(easeTowardTarget);
+    };
+
     const measure = () => {
-      frame = 0;
+      measureFrame = 0;
       const el = ref.current;
       if (!el) return;
       const rect = el.getBoundingClientRect();
       const total = rect.height - window.innerHeight;
       if (total <= 0) {
-        setP(rect.top < window.innerHeight * 0.5 ? 1 : 0);
+        target = rect.top < window.innerHeight * 0.5 ? 1 : 0;
+        startEasing();
         return;
       }
       const raw = -rect.top / total;
-      setP(Math.min(1, Math.max(0, raw)));
+      target = Math.min(1, Math.max(0, raw));
+      startEasing();
     };
     const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(measure);
+      if (!measureFrame) measureFrame = requestAnimationFrame(measure);
     };
     measure();
     window.addEventListener("scroll", onScroll, { passive: true });
@@ -99,7 +122,8 @@ function useSectionProgress(ref: React.RefObject<HTMLElement | null>) {
     return () => {
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
-      if (frame) cancelAnimationFrame(frame);
+      if (measureFrame) cancelAnimationFrame(measureFrame);
+      if (easingFrame) cancelAnimationFrame(easingFrame);
     };
   }, [ref]);
   return p;
@@ -595,7 +619,7 @@ function AboutPage() {
           <section id="align" ref={alignRef} className="relative h-[500vh] bg-background">
             <div className="sticky top-0 h-screen overflow-hidden">
               <div
-                className="flex h-full w-[500vw] will-change-transform"
+                className="flex h-full w-[500vw] transform-gpu will-change-transform"
                 style={{ transform: `translate3d(-${trackShift}vw,0,0)` }}
               >
                 <IntroPanel />
