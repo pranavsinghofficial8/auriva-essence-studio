@@ -264,6 +264,69 @@
   animation: auriva-drift 22s ease-in-out infinite;
 }
 
+@keyframes auriva-smoke-one {
+  0%,
+  100% {
+    transform: translate3d(-8%, 10%, 0) rotate(-8deg) scale(0.92, 1.08);
+    opacity: 0.12;
+  }
+  50% {
+    transform: translate3d(12%, -10%, 0) rotate(9deg) scale(1.08, 1.22);
+    opacity: 0.25;
+  }
+}
+
+@keyframes auriva-smoke-two {
+  0%,
+  100% {
+    transform: translate3d(8%, 12%, 0) rotate(12deg) scale(1, 0.95);
+    opacity: 0.1;
+  }
+  50% {
+    transform: translate3d(-10%, -13%, 0) rotate(-7deg) scale(1.18, 1.12);
+    opacity: 0.22;
+  }
+}
+
+.hero-smoke {
+  overflow: hidden;
+  isolation: isolate;
+  mask-image: linear-gradient(to top, transparent 4%, black 28%, black 88%, transparent 100%);
+}
+
+.hero-smoke-plume {
+  position: absolute;
+  display: block;
+  width: clamp(16rem, 32vw, 34rem);
+  height: 78%;
+  border-radius: 50%;
+  filter: blur(38px);
+  background:
+    radial-gradient(ellipse at 42% 78%, color-mix(in oklab, var(--ivory) 68%, transparent), transparent 48%),
+    radial-gradient(ellipse at 58% 42%, color-mix(in oklab, var(--stone) 34%, transparent), transparent 54%);
+  transform-origin: 50% 90%;
+  will-change: transform, opacity;
+}
+
+.hero-smoke-plume-one {
+  bottom: -18%;
+  left: 28%;
+  animation: auriva-smoke-one 18s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.hero-smoke-plume-two {
+  right: 18%;
+  bottom: -26%;
+  animation: auriva-smoke-two 23s cubic-bezier(0.45, 0.05, 0.55, 0.95) -7s infinite;
+}
+
+.hero-smoke-plume-three {
+  bottom: -30%;
+  left: 48%;
+  width: clamp(12rem, 24vw, 26rem);
+  animation: auriva-smoke-one 28s cubic-bezier(0.45, 0.05, 0.55, 0.95) -14s infinite reverse;
+}
+
 @utility reveal {
   opacity: 0;
   transform: translateY(26px);
