@@ -235,7 +235,7 @@ function Home() {
       {/* 2 — STORY GRID */}
       <section
         id="philosophy"
-        className="grid scroll-mt-24 grid-cols-1 gap-px bg-stone-deep sm:grid-cols-2 lg:grid-cols-4"
+        className="grid scroll-mt-24 grid-cols-1 gap-px bg-stone-deep sm:grid-cols-2 lg:grid-cols-3"
       >
         <PhotoTile src={gridEmber} alt="An incense stick glowing at the ember" />
         <TextTile
@@ -248,7 +248,6 @@ function Home() {
           tone="bg-ivory hover:bg-parchment"
         />
         <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" />
-        <PhotoTile src={gridPetals} alt="Renewed flower petals in warm morning light" />
         <TextTile
           Icon={PetalMark}
           heading="crafted with purpose."
@@ -258,8 +257,7 @@ function Home() {
           hash="process"
           tone="bg-parchment hover:bg-stone"
         />
-        <PhotoTile src={gridAsh} alt="Ash gathered beneath a burning incense stick" />
-        <PhotoTile src={gridCones} alt="Incense cones resting beside a ribbon of smoke" />
+        <PhotoTile src={gridPetals} alt="Renewed flower petals in warm morning light" />
         <TextTile
           Icon={SmokeMark}
           heading="from petal to presence."
