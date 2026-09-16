@@ -11,6 +11,7 @@ import gridAsh from "@/assets/grid-ash.jpg";
 import gridSmoke from "@/assets/grid-smoke.jpg";
 import gridPetals from "@/assets/grid-petals.jpg";
 import gridCones from "@/assets/grid-cones.jpg";
+
 import collSticks from "@/assets/coll-sticks.jpg";
 import collCones from "@/assets/coll-cones.jpg";
 import collBambooless from "@/assets/coll-bambooless.jpg";
