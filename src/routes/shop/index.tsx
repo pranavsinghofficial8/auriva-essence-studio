@@ -35,7 +35,7 @@ function ShopIndex() {
         <div className="mx-auto max-w-2xl text-center">
           <p className="label-track text-muted-foreground">the collection</p>
           <h1 className="mt-6 font-display text-[38px] leading-[1.15] lowercase sm:text-[62px]">
-            three forms. ten fragrances. one philosophy.
+            three forms. one philosophy.
           </h1>
           <p className="mt-6 text-[17px] leading-[1.9] text-muted-foreground">
             Every Auriva blend begins with flowers renewed rather than discarded, and ends with
