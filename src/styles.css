@@ -264,6 +264,46 @@
   animation: auriva-drift 22s ease-in-out infinite;
 }
 
+@keyframes auriva-pan {
+  0% {
+    transform: scale(1.06) translate3d(-1.2%, 1%, 0);
+  }
+  50% {
+    transform: scale(1.12) translate3d(1.2%, -1.4%, 0);
+  }
+  100% {
+    transform: scale(1.06) translate3d(-1.2%, 1%, 0);
+  }
+}
+
+@utility tile-pan {
+  animation: auriva-pan 26s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes auriva-glow {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.85;
+  }
+  50% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+@utility aura-float {
+  animation: auriva-glow 7s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-pan,
+  .aura-float {
+    animation: none;
+  }
+}
+
 @keyframes auriva-smoke-one {
   0%,
   100% {
