@@ -13,6 +13,12 @@ import bannerSticks from "@/assets/banner-sticks.jpg";
 import bannerCones from "@/assets/banner-cones.jpg";
 import bannerDhoop from "@/assets/banner-dhoop.jpg";
 
+import ritualClarity from "@/assets/ritual-clarity.jpg";
+import ritualComfort from "@/assets/ritual-comfort.jpg";
+import ritualGrounding from "@/assets/ritual-grounding.jpg";
+import ritualStillness from "@/assets/ritual-stillness.jpg";
+import gridPetals from "@/assets/grid-petals.jpg";
+
 export type AuraName =
   | "softness"
   | "grounding"
@@ -41,6 +47,10 @@ export type Product = {
   contents: string;
   burn: string;
   image: string;
+  /** Invitation to the fragrance's ritual, shown in the product page's aura band. */
+  ritual: string;
+  /** Background photo for the aura band; falls back to the category banner. */
+  ritualImage?: string;
 };
 
 export type Category = {
@@ -102,6 +112,8 @@ export const products: Product[] = [
     contents: "40 sticks and 1 holder",
     burn: "30–35 min ritual",
     image: prodJasmine,
+    ritual:
+      "Light it when the day has asked too much of you. Let the first thread of smoke rise, unclench your jaw, and offer yourself the tenderness you give everyone else. Stay until the room feels gentle again.",
   },
   {
     slug: "nagchampa",
@@ -118,6 +130,9 @@ export const products: Product[] = [
     contents: "40 sticks and 1 holder",
     burn: "30–35 min ritual",
     image: prodNagchampa,
+    ritual:
+      "Light it when your thoughts are racing ahead of you. Sit with your feet on the floor, follow the smoke down to your breath, and let its earthiness draw you back into your body, one slow exhale at a time.",
+    ritualImage: ritualGrounding,
   },
   {
     slug: "palo-santo",
@@ -134,6 +149,8 @@ export const products: Product[] = [
     contents: "40 sticks and 1 holder",
     burn: "30–35 min ritual",
     image: prodPaloSanto,
+    ritual:
+      "Light it before someone you love walks in, or before an evening kept just for yourself. Put the phone away, pour something warm, and let the sweet, woody smoke draw you closer.",
   },
   {
     slug: "sandalwood",
@@ -150,6 +167,8 @@ export const products: Product[] = [
     contents: "40 sticks and 1 holder",
     burn: "30–35 min ritual",
     image: prodSandalwood,
+    ritual:
+      "Light it between one part of the day and the next. Close your eyes for a few long breaths and let the creamy woods quiet the noise. Return when you feel level again.",
   },
   {
     slug: "oudh",
@@ -166,6 +185,8 @@ export const products: Product[] = [
     contents: "40 cones and 1 holder",
     burn: "25–30 min ritual",
     image: prodOudh,
+    ritual:
+      "Light a cone when you need to steady yourself. Let the dark, resinous smoke settle around you and sit with it a while. There is strength in staying still.",
   },
   {
     slug: "vanilla-amber",
@@ -182,6 +203,9 @@ export const products: Product[] = [
     contents: "40 cones and 1 holder",
     burn: "25–30 min ritual",
     image: prodVanillaAmber,
+    ritual:
+      "Light a cone at dusk, dim the lamps and let the room go quiet. Nothing needs answering now. Watch the smoke curl, breathe with it, and let your mind come to rest.",
+    ritualImage: ritualStillness,
   },
   {
     slug: "rose-amber",
@@ -198,6 +222,9 @@ export const products: Product[] = [
     contents: "40 cones and 1 holder",
     burn: "25–30 min ritual",
     image: prodRoseAmber,
+    ritual:
+      "Light a cone when you need a little reassurance. Wrap yourself in something soft, let rose and warm amber fill the room, and remember that you are allowed to rest.",
+    ritualImage: gridPetals,
   },
   {
     slug: "coconut-cinnamon",
@@ -214,6 +241,9 @@ export const products: Product[] = [
     contents: "30 sticks and 1 holder",
     burn: "40–45 min ritual",
     image: prodCoconutCinnamon,
+    ritual:
+      "Light it on a slow evening at home. Let the warm spice and coconut fill the room, and settle into the ease of being exactly where you are.",
+    ritualImage: ritualComfort,
   },
   {
     slug: "lemongrass-citronella",
@@ -230,6 +260,9 @@ export const products: Product[] = [
     contents: "30 sticks and 1 holder",
     burn: "40–45 min ritual",
     image: prodLemongrass,
+    ritual:
+      "Light it before you begin: a page, a plan, a hard conversation. Open a window, take three bright breaths, and let the citrus clear the way for one clear thought.",
+    ritualImage: ritualClarity,
   },
   {
     slug: "camphor-tulsi",
@@ -246,6 +279,8 @@ export const products: Product[] = [
     contents: "30 sticks and 1 holder",
     burn: "40–45 min ritual",
     image: prodCamphorTulsi,
+    ritual:
+      "Light it to begin again, after a long week, a heavy day, or a room that feels stale. Open the windows and let the cool, clean smoke carry the old air out.",
   },
 ];
 

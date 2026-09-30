@@ -1,5 +1,5 @@
-import logoDark from "@/assets/auriva-logo.png.asset.json";
-import logoLight from "@/assets/auriva-logo-light.png.asset.json";
+import logoDark from "@/assets/auriva-logo.png";
+import logoLight from "@/assets/auriva-logo-light.png";
 
 export function Logo({
   tagline = true,
@@ -13,7 +13,7 @@ export function Logo({
   return (
     <div className={`flex select-none flex-col items-center leading-none ${className}`}>
       <img
-        src={light ? logoLight.url : logoDark.url}
+        src={light ? logoLight : logoDark}
         alt="Auriva"
         className="h-9 w-auto sm:h-11"
         draggable={false}

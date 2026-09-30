@@ -1,8 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { AuraGlyph } from "@/components/auriva/aura-marks";
-import { categories, productsIn, promises } from "@/lib/auriva-catalog";
+import { categories, promises } from "@/lib/auriva-catalog";
 
 export const Route = createFileRoute("/shop/")({
   head: () => ({
@@ -38,8 +37,8 @@ function ShopIndex() {
             three forms. one philosophy.
           </h1>
           <p className="mt-6 text-[17px] leading-[1.9] text-muted-foreground">
-            Every Auriva blend begins with flowers renewed rather than discarded, and ends with
-            a moment you set aside for yourself.
+            Every Auriva blend begins with flowers renewed rather than discarded, and ends with a
+            moment you set aside for yourself.
           </p>
         </div>
       </section>
@@ -65,16 +64,11 @@ function ShopIndex() {
                 <p className="label-track text-muted-foreground">{c.eyebrow}</p>
                 <h2 className="mt-2 font-display text-[26px] lowercase">{c.name}</h2>
                 <p className="mt-4 text-[15px] leading-[1.8] text-muted-foreground">{c.intro}</p>
-                <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2">
-                  {productsIn(c.slug).map((p) => (
-                    <span key={p.slug} className="flex items-center gap-2 text-[13px] opacity-70">
-                      <AuraGlyph aura={p.aura} className="h-4 w-4 text-taupe" />
-                      {p.name}
-                    </span>
-                  ))}
-                </div>
-                <span className="label-track mt-8 inline-flex items-center gap-3 transition-opacity duration-500 group-hover:opacity-60">
-                  Discover <span>——→</span>
+                <span className="label-track mt-8 inline-flex items-center gap-3 transition-opacity duration-700 group-hover:opacity-55">
+                  discover
+                  <span className="inline-block transition-transform duration-700 group-hover:translate-x-2">
+                    →
+                  </span>
                 </span>
               </div>
             </Link>

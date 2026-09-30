@@ -46,8 +46,7 @@ function AuthPage() {
             {mode === "signin" ? "welcome back" : "join the maison"}
           </h1>
           <p className="mt-8 max-w-md text-muted-foreground">
-            Your account keeps your bag and your rituals in one place. This demo account lives
-            only in your browser — no details ever leave this device.
+            Your account keeps your bag and your rituals in one place.
           </p>
         </div>
 

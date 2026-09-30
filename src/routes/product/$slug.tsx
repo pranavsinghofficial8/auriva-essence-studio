@@ -3,23 +3,36 @@ import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-ro
 import { addToBag, useAccount } from "@/lib/auriva-store";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { AuraGlyph } from "@/components/auriva/aura-marks";
+import { AuraGlyph, AuraMedallion } from "@/components/auriva/aura-marks";
 import { BagIcon } from "@/components/auriva/marks";
 import type { Category, Product } from "@/lib/auriva-catalog";
 import { getCategory, getProduct, products, promises } from "@/lib/auriva-catalog";
+import { preloadImage } from "@/lib/preload-image";
 
 export const Route = createFileRoute("/product/$slug")({
-  loader: ({ params }): { product: Product; category: Category; related: Product[] } => {
+  loader: async ({
+    params,
+  }): Promise<{ product: Product; category: Category; related: Product[] }> => {
     const product = getProduct(params.slug);
     if (!product) throw notFound();
     const category = getCategory(product.category)!;
     const related = products.filter((p) => p.slug !== product.slug).slice(0, 4);
+    // Fetch the photos a visitor lands on (the top, or #ritual from the ritual
+    // cards) before the page crossfades in, so neither pops in afterwards.
+    await Promise.all([
+      preloadImage(product.image),
+      preloadImage(product.ritualImage ?? category.banner),
+    ]);
     return { product, category, related };
   },
   head: ({ loaderData }) => {
     const p = loaderData?.product;
-    const title = p ? `${p.name} ${loaderData.category.name} — A Scent of ${p.auraLabel} | Auriva` : "Auriva";
-    const description = p ? `${p.oneLiner} ${p.poem} Notes of ${p.notes.toLowerCase()}.` : "Auriva incense.";
+    const title = p
+      ? `${p.name} ${loaderData.category.name} — A Scent of ${p.auraLabel} | Auriva`
+      : "Auriva";
+    const description = p
+      ? `${p.oneLiner} ${p.poem} Notes of ${p.notes.toLowerCase()}.`
+      : "Auriva incense.";
     return {
       meta: [
         { title },
@@ -67,7 +80,6 @@ function ProductPage() {
     window.setTimeout(() => setAdded(false), 2400);
   };
 
-
   return (
     <div className="bg-background">
       <Nav threshold={80} />
@@ -108,7 +120,7 @@ function ProductPage() {
             {product.name}
           </h1>
           <p className="mt-4 text-[17px] text-muted-foreground italic">
-            A scent of {product.auraLabel.toLowerCase()} — {product.quality.toLowerCase()}
+            a scent of {product.auraLabel.toLowerCase()} — {product.quality.toLowerCase()}
           </p>
           <p className="mt-7 text-[20px]">₹{product.price}</p>
           <p className="mt-1 text-[13px] text-muted-foreground">
@@ -172,54 +184,57 @@ function ProductPage() {
         </div>
       </section>
 
-      {/* AURA BAND */}
+      {/* AURA BAND — the fragrance's ritual, over a photo that evokes it */}
       <section
         id="ritual"
         className="relative scroll-mt-24 overflow-hidden bg-espresso text-espresso-foreground"
       >
         <img
-          src={category.banner}
+          src={product.ritualImage ?? category.banner}
           alt=""
           aria-hidden="true"
-          loading="lazy"
-          className="absolute inset-0 h-full w-full object-cover opacity-35"
+          className="tile-pan absolute inset-0 h-full w-full object-cover opacity-70"
         />
+        {/* Scrim: an even wash plus a darker pool behind the copy, so it reads on any photo. */}
+        <div className="absolute inset-0 bg-espresso/45" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_65%_at_50%_50%,rgb(48_43_40/0.6),transparent)]" />
         <div className="relative mx-auto flex w-full max-w-[1600px] flex-col items-center px-6 py-28 text-center sm:px-10 sm:py-36">
-          <AuraGlyph aura={product.aura} className="h-14 w-14 opacity-80" />
-          <p className="label-track mt-8 opacity-70">The Aura</p>
-          <h2 className="mt-4 font-display text-[32px] sm:text-[42px]">
+          <AuraMedallion aura={product.aura} tone="light" className="h-20 w-20" />
+          <p className="label-track mt-8 opacity-85">The Aura</p>
+          <h2 className="mt-4 font-display text-[36px] sm:text-[48px]">
             {"{ "}
             {product.auraLabel.toLowerCase()}
             {" }"}
           </h2>
-          <p className="mt-6 max-w-xl text-[17px] leading-[1.9] opacity-85 italic">
+          <p className="mt-6 max-w-xl text-[19px] leading-[1.75] italic lowercase sm:text-[21px]">
             {product.poem}
           </p>
-          <p className="mt-8 max-w-lg text-[15px] leading-[1.9] opacity-65">
-            Every Auriva fragrance is mapped to an aura — a feeling to return to. Light it when
-            you need {product.auraLabel.toLowerCase()}, and let the room change with you.
-          </p>
+          <span className="my-10 h-px w-16 bg-ivory/45" />
+          <p className="label-track opacity-85">your ritual of {product.auraLabel.toLowerCase()}</p>
+          <p className="mt-5 max-w-xl text-[17px] leading-[1.9] sm:text-[18px]">{product.ritual}</p>
         </div>
       </section>
 
       {/* HOW TO */}
       <section className="mx-auto w-full max-w-[1100px] px-6 py-24 sm:px-10">
-        <h2 className="text-center font-display text-[26px]">The Ritual</h2>
+        <h2 className="text-center font-display text-[30px] leading-tight sm:text-[36px]">
+          the ritual
+        </h2>
         <div className="mt-14 grid gap-12 sm:grid-cols-3">
           {[
             {
               step: "01",
-              title: "Light",
+              title: "light",
               body: "Hold the flame to the tip until it catches, then let it settle to an ember.",
             },
             {
               step: "02",
-              title: "Place",
+              title: "place",
               body: `Set it in the holder included with your ${category.name.toLowerCase()}, away from draughts.`,
             },
             {
               step: "03",
-              title: "Stay",
+              title: "stay",
               body: `${product.burn}. Long enough to finish a chapter, a stretch, or a thought.`,
             },
           ].map((s) => (
@@ -234,7 +249,9 @@ function ProductPage() {
 
       {/* RELATED */}
       <section className="bg-secondary px-6 py-24 sm:px-10">
-        <h2 className="text-center font-display text-[26px]">You may also like</h2>
+        <h2 className="text-center font-display text-[30px] leading-tight sm:text-[36px]">
+          you may also like
+        </h2>
         <div className="mx-auto mt-14 grid w-full max-w-[1400px] gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {related.map((p) => (
             <Link key={p.slug} to="/product/$slug" params={{ slug: p.slug }} className="group">
@@ -247,7 +264,11 @@ function ProductPage() {
                 />
               </div>
               <div className="mt-5 flex items-start gap-3">
-                <AuraGlyph aura={p.aura} className="mt-1 h-5 w-5 shrink-0 text-taupe" />
+                <AuraGlyph
+                  aura={p.aura}
+                  strokeWidth={1.3}
+                  className="mt-1 h-5 w-5 shrink-0 text-espresso/70"
+                />
                 <div>
                   <h3 className="font-display text-[19px]">{p.name}</h3>
                   <p className="text-[13px] text-muted-foreground italic">

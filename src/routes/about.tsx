@@ -1,5 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
@@ -48,34 +55,49 @@ export const Route = createFileRoute("/about")({
 /* hooks                                                               */
 /* ------------------------------------------------------------------ */
 
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const on = () => setReduced(mq.matches);
-    on();
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
-  }, []);
-  return reduced;
+/**
+ * Media query as state. Right on the first client render (so arriving via a link
+ * lays out the correct variant straight away); false during SSR and hydration.
+ */
+function useMediaQuery(query: string) {
+  return useSyncExternalStore(
+    (onChange) => {
+      const mq = window.matchMedia(query);
+      mq.addEventListener("change", onChange);
+      return () => mq.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(query).matches,
+    () => false,
+  );
 }
 
-function useIsMobile() {
-  const [mobile, setMobile] = useState(false);
+const useReducedMotion = () => useMediaQuery("(prefers-reduced-motion: reduce)");
+const useIsMobile = () => useMediaQuery("(max-width: 767px)");
+
+/**
+ * Scroll to the URL's #hash before the page first paints, and again if the layout
+ * variant changes before the visitor scrolls (e.g. after hydration). Runs ahead of
+ * useSectionProgress so pinned sections start at the right frame instead of sliding.
+ */
+function useInitialHashScroll(layoutKey: string) {
+  const userScrolled = useRef(false);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const on = () => setMobile(mq.matches);
-    on();
-    mq.addEventListener("change", on);
-    return () => mq.removeEventListener("change", on);
+    const mark = () => (userScrolled.current = true);
+    const events = ["wheel", "touchmove", "keydown"] as const;
+    events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
+    return () => events.forEach((e) => window.removeEventListener(e, mark));
   }, []);
-  return mobile;
+  useLayoutEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id || userScrolled.current) return;
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [layoutKey]);
 }
 
 /** Progress (0–1) of an element travelling through the viewport pin. */
 function useSectionProgress(ref: React.RefObject<HTMLElement | null>) {
   const [p, setP] = useState(0);
-  useEffect(() => {
+  useLayoutEffect(() => {
     let measureFrame = 0;
     let easingFrame = 0;
     let current = 0;
@@ -98,25 +120,27 @@ function useSectionProgress(ref: React.RefObject<HTMLElement | null>) {
       if (!easingFrame) easingFrame = requestAnimationFrame(easeTowardTarget);
     };
 
-    const measure = () => {
-      measureFrame = 0;
+    const read = () => {
       const el = ref.current;
-      if (!el) return;
+      if (!el) return null;
       const rect = el.getBoundingClientRect();
       const total = rect.height - window.innerHeight;
-      if (total <= 0) {
-        target = rect.top < window.innerHeight * 0.5 ? 1 : 0;
-        startEasing();
-        return;
-      }
-      const raw = -rect.top / total;
-      target = Math.min(1, Math.max(0, raw));
+      if (total <= 0) return rect.top < window.innerHeight * 0.5 ? 1 : 0;
+      return Math.min(1, Math.max(0, -rect.top / total));
+    };
+    const measure = () => {
+      measureFrame = 0;
+      const next = read();
+      if (next === null) return;
+      target = next;
       startEasing();
     };
     const onScroll = () => {
       if (!measureFrame) measureFrame = requestAnimationFrame(measure);
     };
-    measure();
+    // Start exactly where the page is (e.g. arriving on a #hash), no easing in.
+    current = target = read() ?? 0;
+    setP(current);
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
@@ -129,15 +153,33 @@ function useSectionProgress(ref: React.RefObject<HTMLElement | null>) {
   return p;
 }
 
+/** True once the element's top has scrolled up past `fraction` of the viewport height. */
+function useScrolledTo(ref: React.RefObject<HTMLElement | null>, fraction = 0.5) {
+  const [reached, setReached] = useState(false);
+  useLayoutEffect(() => {
+    const check = () => {
+      const el = ref.current;
+      if (el) setReached(el.getBoundingClientRect().top <= window.innerHeight * fraction);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+    };
+  }, [ref, fraction]);
+  return reached;
+}
+
 function useInView(ref: React.RefObject<HTMLElement | null>, threshold = 0.3) {
   const [seen, setSeen] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(
-      (entries) => entries[0]?.isIntersecting && setSeen(true),
-      { threshold },
-    );
+    const io = new IntersectionObserver((entries) => entries[0]?.isIntersecting && setSeen(true), {
+      threshold,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, [ref, threshold]);
@@ -261,13 +303,25 @@ const chapters = [
   { id: "aura", label: "aura", Icon: SmokeRiseIcon },
 ];
 
-function ChapterTracker({ progress }: { progress: [number, number, number] }) {
+function ChapterTracker({
+  progress,
+  visible,
+}: {
+  progress: [number, number, number];
+  visible: boolean;
+}) {
   const active = (progress[2] ?? 0) > 0 ? 2 : (progress[1] ?? 0) > 0 ? 1 : 0;
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-4 sm:px-8 sm:pb-6">
+    <div
+      inert={!visible}
+      aria-hidden={!visible}
+      className={`fixed inset-x-0 bottom-0 z-40 px-4 pb-4 transition-[opacity,translate] duration-700 ease-out sm:px-8 sm:pb-6 ${
+        visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
+      }`}
+    >
       <div className="mx-auto flex w-full max-w-[1200px] items-center gap-3 rounded-full border border-border/60 bg-background/80 px-5 py-3 backdrop-blur-md sm:gap-6 sm:px-9 sm:py-4">
         {chapters.map((c, i) => (
           <div key={c.id} className="flex flex-1 items-center gap-3 last:flex-none sm:gap-5">
@@ -395,7 +449,7 @@ function BurningStick({ progress }: { progress: number }) {
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     draw(progress);
   }, [draw, progress]);
 
@@ -414,6 +468,7 @@ function BurningStick({ progress }: { progress: number }) {
 
 const traditions = [
   {
+    id: "japan",
     Icon: ToriiLarge,
     title: "japan — the mind",
     lines: [
@@ -424,6 +479,7 @@ const traditions = [
     dark: false,
   },
   {
+    id: "france",
     Icon: CompositionLarge,
     title: "france — the heart",
     lines: [
@@ -435,6 +491,7 @@ const traditions = [
     dark: true,
   },
   {
+    id: "india",
     Icon: SmokeLarge,
     title: "india — the soul",
     lines: [
@@ -485,8 +542,8 @@ function IntroPanel() {
   return (
     <div className="flex h-full w-screen shrink-0 items-center bg-background px-8 sm:px-20">
       <p className="max-w-2xl text-[22px] leading-[1.5] lowercase sm:text-[34px]">
-        fragrance has meant something different everywhere it's been practiced. auriva was built
-        by borrowing from three — which is why it doesn't belong to just one place.
+        fragrance has meant something different everywhere it's been practiced. auriva was built by
+        borrowing from three — which is why it doesn't belong to just one place.
       </p>
     </div>
   );
@@ -525,6 +582,7 @@ const steps = [
 function AboutPage() {
   const reduced = useReducedMotion();
   const mobile = useIsMobile();
+  useInitialHashScroll(mobile || reduced ? "scroller" : "pinned");
 
   const awakenRef = useRef<HTMLElement>(null);
   const alignRef = useRef<HTMLElement>(null);
@@ -533,6 +591,8 @@ function AboutPage() {
   const awakenP = useSectionProgress(awakenRef);
   const alignP = useSectionProgress(alignRef);
   const auraP = useSectionProgress(auraRef);
+  // Keep the top nav and chapter bar off the opening logo screen; bring them in with "awaken".
+  const barsVisible = useScrolledTo(awakenRef);
 
   const [taglineIn, setTaglineIn] = useState(false);
   useEffect(() => {
@@ -548,8 +608,8 @@ function AboutPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Nav threshold={80} />
-      <ChapterTracker progress={[awakenP, alignP, auraP]} />
+      <Nav threshold={80} hidden={!barsVisible} />
+      <ChapterTracker progress={[awakenP, alignP, auraP]} visible={barsVisible} />
 
       <main>
         {/* 1 — hero */}
@@ -606,7 +666,7 @@ function AboutPage() {
                 <IntroPanel />
               </div>
               {traditions.map((t) => (
-                <div key={t.title} className="flex h-[80vh] snap-start">
+                <div key={t.id} id={t.id} className="flex h-[80vh] snap-start">
                   <TraditionPanel {...t} />
                 </div>
               ))}
@@ -617,6 +677,17 @@ function AboutPage() {
           </section>
         ) : (
           <section id="align" ref={alignRef} className="relative h-[500vh] bg-background">
+            {/* Panel k (intro = 0) fills the screen after k × 100vh of scrolling; these
+                anchors let /about#japan, #france and #india land exactly there. */}
+            {traditions.map((t, i) => (
+              <span
+                key={t.id}
+                id={t.id}
+                aria-hidden="true"
+                className="absolute left-0 h-px w-px"
+                style={{ top: `${(i + 1) * 100}vh` }}
+              />
+            ))}
             <div className="sticky top-0 h-screen overflow-hidden">
               <div
                 className="flex h-full w-[500vw] transform-gpu will-change-transform"
@@ -624,7 +695,7 @@ function AboutPage() {
               >
                 <IntroPanel />
                 {traditions.map((t) => (
-                  <TraditionPanel key={t.title} {...t} />
+                  <TraditionPanel key={t.id} {...t} />
                 ))}
                 <ClosingPanel />
               </div>
@@ -638,8 +709,8 @@ function AboutPage() {
             <div className="mx-auto w-full max-w-[1300px] px-8 sm:px-16">
               <p className="label-track text-gold">aura</p>
               <p className="mt-6 max-w-2xl text-[20px] leading-[1.5] lowercase sm:text-[30px]">
-                withered temple flowers, given a second life — hand-gathered, sun-dried, and
-                rolled by women artisans into charcoal-free incense.
+                withered temple flowers, given a second life — hand-gathered, sun-dried, and rolled
+                by women artisans into charcoal-free incense.
               </p>
 
               <div className="relative mt-14 sm:mt-20">
@@ -708,9 +779,6 @@ function AboutPage() {
                 </div>
               ))}
             </div>
-            <p className="label-track mt-14 text-muted-foreground">
-              naturally scented · 100% pure · locally made
-            </p>
           </div>
         </section>
 

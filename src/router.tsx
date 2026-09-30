@@ -9,7 +9,11 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    // Crossfade between pages (styled in styles.css). Same-page hash links opt out
+    // and scroll smoothly instead.
+    defaultViewTransition: true,
   });
 
   return router;

@@ -1,14 +1,17 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { AuraGlyph } from "@/components/auriva/aura-marks";
+import { AuraMedallion } from "@/components/auriva/aura-marks";
 import type { Category, Product } from "@/lib/auriva-catalog";
 import { categories, getCategory, productsIn, promises } from "@/lib/auriva-catalog";
+import { preloadImage } from "@/lib/preload-image";
 
 export const Route = createFileRoute("/shop/$category")({
-  loader: ({ params }): { category: Category; items: Product[] } => {
+  loader: async ({ params }): Promise<{ category: Category; items: Product[] }> => {
     const category = getCategory(params.category);
     if (!category) throw notFound();
+    // The banner fills the first screen; have it ready before the page crossfades in.
+    await preloadImage(category.banner);
     return { category, items: productsIn(category.slug) };
   },
   head: ({ loaderData }) => {
@@ -61,9 +64,11 @@ function CategoryPage() {
           height={1088}
           className="absolute inset-0 h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-espresso/60 via-espresso/10 to-espresso/25" />
+        {/* Scrim: darkest where the text sits (lower-centre) so it reads on any photo. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-espresso/85 via-espresso/35 to-espresso/25" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_50%_72%,rgb(48_43_40/0.45),transparent)]" />
         <div className="absolute inset-x-0 bottom-[12vh] flex flex-col items-center px-6 text-center text-walnut-foreground">
-          <p className="animate-rise label-track opacity-80">{category.eyebrow}</p>
+          <p className="animate-rise label-track opacity-90">{category.eyebrow}</p>
           <h1
             className="animate-rise mt-5 max-w-3xl text-[34px] leading-[1.2] font-light sm:text-[52px]"
             style={{ animationDelay: "140ms" }}
@@ -71,7 +76,7 @@ function CategoryPage() {
             {category.name}
           </h1>
           <p
-            className="animate-rise mt-6 max-w-xl text-[16px] leading-[1.9] opacity-85 sm:text-[17px]"
+            className="animate-rise mt-6 max-w-xl text-[16px] leading-[1.9] sm:text-[18px]"
             style={{ animationDelay: "280ms" }}
           >
             {category.intro}
@@ -81,16 +86,21 @@ function CategoryPage() {
 
       {/* 2 — FRAGRANCE STRIP */}
       <section className="border-b border-border/70 bg-background">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-start justify-center gap-x-16 gap-y-10 px-6 py-12 sm:px-10">
+        <div className="mx-auto flex w-full max-w-[1600px] flex-wrap items-start justify-center gap-x-12 gap-y-12 px-6 py-14 sm:gap-x-20 sm:px-10 sm:py-16">
           {items.map((p) => (
             <a
               key={p.slug}
               href={`#${p.slug}`}
-              className="group flex w-24 flex-col items-center text-center transition-opacity duration-500 hover:opacity-60"
+              className="group flex w-32 flex-col items-center text-center outline-none"
             >
-              <AuraGlyph aura={p.aura} className="h-9 w-9 text-taupe" />
-              <span className="label-track mt-4 leading-[1.5]">{p.name}</span>
-              <span className="mt-1 text-[12px] text-muted-foreground italic">{p.auraLabel}</span>
+              <AuraMedallion aura={p.aura} />
+              <span className="label-track mt-5 leading-[1.5] transition-colors duration-700 group-hover:text-foreground">
+                {p.name}
+              </span>
+              <span className="mt-1 text-[14px] text-muted-foreground italic transition-colors duration-700 group-hover:text-foreground">
+                {p.auraLabel.toLowerCase()}
+              </span>
+              <span className="mt-3 h-px w-0 bg-espresso/40 transition-[width] duration-700 ease-out group-hover:w-10 group-focus-visible:w-10" />
             </a>
           ))}
         </div>
@@ -125,7 +135,7 @@ function CategoryPage() {
                 flipped ? "lg:order-1" : ""
               }`}
             >
-              <AuraGlyph aura={p.aura} className="h-10 w-10 text-taupe" />
+              <AuraMedallion aura={p.aura} className="h-14 w-14" />
               <p className="label-track mt-7 text-muted-foreground">
                 A scent of {p.auraLabel.toLowerCase()}
               </p>
@@ -134,7 +144,7 @@ function CategoryPage() {
               </h2>
               <div className="hairline my-8 w-20" />
               <p className="max-w-md text-[17px] leading-[1.9]">{p.oneLiner}</p>
-              <p className="mt-3 max-w-md text-[16px] leading-[1.9] text-muted-foreground italic">
+              <p className="mt-3 max-w-md text-[16px] leading-[1.9] text-muted-foreground italic lowercase">
                 {p.poem}
               </p>
               <p className="mt-8 max-w-md text-[14px] leading-[1.9] text-muted-foreground">
@@ -170,7 +180,9 @@ function CategoryPage() {
 
       {/* OTHER COLLECTIONS */}
       <section className="bg-background px-6 py-24 sm:px-10">
-        <h2 className="text-center font-display text-[26px]">Continue the ritual</h2>
+        <h2 className="text-center font-display text-[30px] leading-tight sm:text-[36px]">
+          continue the ritual
+        </h2>
         <div className="mx-auto mt-12 grid w-full max-w-[1100px] gap-px bg-stone-deep sm:grid-cols-2">
           {categories
             .filter((c) => c.slug !== category.slug)

@@ -28,9 +28,12 @@ const menu: {
 export function Nav({
   threshold,
   overlay = "dark",
+  hidden = false,
 }: {
   threshold?: number;
   overlay?: "dark" | "light";
+  /** Slide the bar up out of view (e.g. over an opening full-screen section). */
+  hidden?: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -38,6 +41,10 @@ export function Nav({
   const account = useAccount();
 
 
+
+  useEffect(() => {
+    if (hidden) setOpen(false);
+  }, [hidden]);
 
   useEffect(() => {
     const onScroll = () =>
@@ -52,11 +59,12 @@ export function Nav({
 
   return (
     <header
+      inert={hidden}
       className={`fixed inset-x-0 top-0 z-50 transition-all duration-500 ease-out ${
         solid
           ? "bg-background text-foreground border-b border-border/60"
           : `bg-transparent ${overlayText}`
-      }`}
+      } ${hidden ? "pointer-events-none -translate-y-full opacity-0" : ""}`}
     >
       <div className="mx-auto grid h-20 w-full max-w-[1600px] grid-cols-3 items-center px-6 sm:h-24 sm:px-10">
         <div className="flex items-center">
@@ -136,11 +144,6 @@ export function Nav({
               </li>
             ))}
           </ul>
-          <div className="flex items-end justify-start sm:justify-end">
-            <p className="max-w-xs text-muted-foreground italic">
-              from petal to presence — small-batch incense, made for slower days.
-            </p>
-          </div>
         </nav>
       </div>
     </header>

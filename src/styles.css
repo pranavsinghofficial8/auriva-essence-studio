@@ -19,8 +19,8 @@
  */
 
 @theme inline {
-  --font-display: "Nourd", "Jost", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Nourd", "Jost", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Jost", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Jost", ui-sans-serif, system-ui, sans-serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -177,6 +177,13 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Tailwind v4 resets buttons to the default arrow cursor; restore the hand. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* House style: every heading is light and lowercase, on every page. */
   h1,
   h2,
   h3,
@@ -184,6 +191,7 @@
     font-family: var(--font-display);
     font-weight: 300;
     letter-spacing: 0.005em;
+    text-transform: lowercase;
   }
 }
 
@@ -365,6 +373,138 @@
   left: 48%;
   width: clamp(12rem, 24vw, 26rem);
   animation: auriva-smoke-one 28s cubic-bezier(0.45, 0.05, 0.55, 0.95) -14s infinite reverse;
+}
+
+/*
+ * Live smoke: a crop of the hero photo around its smoke wisps, warped by the
+ * #hero-smoke-warp SVG filter. --d is the rendered size of the square photo
+ * under object-cover, so the crop lines up with the photo at any viewport.
+ */
+@keyframes auriva-smoke-rise {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translate3d(0.4%, -1.2%, 0);
+    opacity: 1;
+  }
+}
+
+.hero-smoke-live {
+  --d: max(100cqw, 100cqh);
+  position: absolute;
+  left: calc(50cqw + 0.12 * var(--d));
+  top: calc(50cqh - 0.4 * var(--d));
+  width: calc(0.37 * var(--d));
+  height: calc(0.4 * var(--d));
+  overflow: hidden;
+  filter: url(#hero-smoke-warp);
+  mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, black 45%, transparent 100%);
+  animation: auriva-smoke-rise 25s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.hero-smoke-live img {
+  position: absolute;
+  left: calc(-0.62 * var(--d));
+  top: calc(-0.1 * var(--d));
+  width: var(--d);
+  height: var(--d);
+  max-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-smoke-live {
+    display: none;
+  }
+}
+
+/*
+ * On screens narrower than ~0.58 of the hero's height (phones in portrait),
+ * object-cover crops the photo's smoke out of frame, so skip both smoke layers.
+ */
+@container (max-aspect-ratio: 29 / 50) {
+  .hero-smoke-live,
+  .hero-smoke-canvas {
+    display: none;
+  }
+}
+
+/* Page crossfade for links that opt in with viewTransition (the ritual cards). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}
+
+/* Word-by-word unfurl for RevealWords (components/auriva/Reveal.tsx). */
+.reveal-word {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.45em);
+  filter: blur(8px);
+  transition:
+    opacity 1000ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    transform 1000ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 1000ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.reveal-words[data-shown="true"] .reveal-word {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-word {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition: none;
+  }
+}
+
+/* Ring that ripples out of an AuraMedallion: on hover, or always with .aura-ripple-always. */
+@keyframes auriva-ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.7);
+    opacity: 0;
+  }
+}
+
+.aura-ripple {
+  opacity: 0;
+}
+
+.group:hover .aura-ripple,
+.group:focus-visible .aura-ripple {
+  animation: auriva-ripple 1.8s ease-out infinite;
+}
+
+.aura-ripple-always {
+  animation: auriva-ripple 3.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aura-ripple,
+  .group:hover .aura-ripple,
+  .aura-ripple-always {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 @utility reveal {

@@ -14,21 +14,21 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="label-track text-muted-foreground">404</p>
+        <h1 className="mt-6 text-[38px] leading-tight font-extralight sm:text-[52px]">
+          this page has drifted away
+        </h1>
+        <p className="mt-6 text-[17px] leading-[1.8] text-muted-foreground">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
+        <Link
+          to="/"
+          className="label-track mt-10 inline-block border border-foreground/40 px-10 py-4 transition-all duration-700 hover:border-foreground hover:bg-foreground hover:text-background"
+        >
+          return home
+        </Link>
       </div>
     </div>
   );
@@ -42,29 +42,29 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
+        <h1 className="text-[34px] leading-tight font-extralight sm:text-[44px]">
+          this page didn't load
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-6 text-[17px] leading-[1.8] text-muted-foreground">
           Something went wrong on our end. You can try refreshing or head back home.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="label-track bg-foreground px-10 py-4 text-background transition-opacity duration-500 hover:opacity-85"
           >
-            Try again
+            try again
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="label-track border border-foreground/40 px-10 py-4 transition-all duration-700 hover:border-foreground hover:bg-foreground hover:text-background"
           >
-            Go home
+            return home
           </a>
         </div>
       </div>
@@ -102,7 +102,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200;0,300;0,400;0,500;0,600;1,200;1,300&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,200..700;1,200..700&display=swap",
       },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],

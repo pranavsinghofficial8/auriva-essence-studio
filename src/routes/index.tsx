@@ -2,7 +2,8 @@ import { useState, type ReactElement } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { Reveal } from "@/components/auriva/Reveal";
+import { HeroSmoke } from "@/components/auriva/HeroSmoke";
+import { Reveal, RevealWords } from "@/components/auriva/Reveal";
 import { AuraMark, BagIcon, PetalMark, SigilMark, SmokeMark } from "@/components/auriva/marks";
 
 import heroLotus from "@/assets/hero-lotus.jpg";
@@ -83,6 +84,12 @@ const bestsellers = [
   },
 ];
 
+/** Link props for hash links within the homepage: glide to the section, no crossfade. */
+const samePageScroll = {
+  viewTransition: false,
+  hashScrollIntoView: { behavior: "smooth", block: "start" },
+} as const;
+
 const rituals = [
   {
     title: "stillness",
@@ -133,6 +140,7 @@ function ArrowLink({
     <Link
       to={to}
       {...(hash ? { hash } : {})}
+      {...(to === "/" ? samePageScroll : {})}
       className={`label-track group inline-flex items-center gap-3 transition-opacity duration-700 hover:opacity-55 ${className}`}
     >
       {children}
@@ -202,7 +210,7 @@ function Home() {
       <Nav />
 
       {/* 1 — HERO */}
-      <section className="relative h-[100svh] w-full overflow-hidden bg-ivory">
+      <section className="relative h-[100svh] w-full overflow-hidden bg-ivory [container-type:size]">
         <img
           src={heroLotus}
           alt="A white lotus resting in soft light beside drifting incense smoke"
@@ -210,6 +218,31 @@ function Home() {
           height={1280}
           className="absolute inset-0 h-full w-full object-cover"
         />
+        {/* Slow warp over the photo's own smoke wisps (see .hero-smoke-live in styles.css). */}
+        <svg className="absolute h-0 w-0" aria-hidden="true" focusable="false">
+          <filter id="hero-smoke-warp" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.011 0.018" numOctaves="2" seed="7">
+              <animate
+                attributeName="baseFrequency"
+                dur="35s"
+                values="0.011 0.018;0.014 0.024;0.011 0.018"
+                keySplines="0.45 0 0.55 1;0.45 0 0.55 1"
+                calcMode="spline"
+                repeatCount="indefinite"
+              />
+            </feTurbulence>
+            <feDisplacementMap
+              in="SourceGraphic"
+              scale="22"
+              xChannelSelector="R"
+              yChannelSelector="G"
+            />
+          </filter>
+        </svg>
+        <div className="hero-smoke-live pointer-events-none" aria-hidden="true">
+          <img src={heroLotus} alt="" />
+        </div>
+        <HeroSmoke />
         <div className="hero-smoke pointer-events-none absolute inset-0" aria-hidden="true">
           <span className="hero-smoke-plume hero-smoke-plume-one" />
           <span className="hero-smoke-plume hero-smoke-plume-two" />
@@ -223,13 +256,15 @@ function Home() {
           <h1 className="animate-rise max-w-3xl text-[32px] leading-[1.25] font-extralight lowercase sm:text-[52px]">
             a collection of everyday rituals
           </h1>
-          <a
-            href="#collection"
+          <Link
+            to="/"
+            hash="collection"
+            {...samePageScroll}
             className="animate-rise label-track mt-10 border border-espresso/40 px-11 py-4 transition-all duration-700 hover:border-espresso hover:bg-espresso hover:text-ivory"
             style={{ animationDelay: "420ms" }}
           >
             enter the ritual
-          </a>
+          </Link>
         </div>
       </section>
 
@@ -244,8 +279,8 @@ function Home() {
           heading="every ritual begins with intention."
           body="A match, a breath, a moment set aside. The smallest gestures hold the most."
           link="our philosophy"
-          to="/"
-          hash="philosophy"
+          to="/about"
+          hash="france"
           tone="bg-ivory hover:bg-parchment"
         />
         <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" />
@@ -255,7 +290,7 @@ function Home() {
           body="Blended by hand in small batches, from flowers renewed rather than discarded."
           link="our craft"
           to="/about"
-          hash="process"
+          hash="aura"
           tone="bg-parchment hover:bg-stone"
         />
         <PhotoTile src={gridPetals} alt="Renewed flower petals in warm morning light" />
@@ -265,19 +300,17 @@ function Home() {
           body="What begins as a bloom becomes a scent, and a scent becomes a way of being here."
           link="our story"
           to="/about"
-          hash="process"
+          hash="awaken"
           tone="bg-ivory hover:bg-parchment"
         />
       </section>
 
       {/* 3 — QUOTE */}
       <section className="bg-stone px-6 py-32 sm:py-44">
-        <Reveal className="mx-auto max-w-4xl text-center">
-          <p className="font-display text-[26px] leading-[1.5] font-extralight lowercase sm:text-[44px]">
-            “at auriva, we renew flowers into incense, and incense into a personal ritual”
-          </p>
-          <div className="mx-auto mt-12 h-px w-24 bg-taupe" />
-        </Reveal>
+        <RevealWords
+          text="“at auriva, we renew flowers into incense, and incense into a personal ritual”"
+          className="mx-auto max-w-4xl text-center font-display text-[26px] leading-[1.5] font-extralight lowercase sm:text-[44px]"
+        />
       </section>
 
       {/* 4 — COLLECTION */}
@@ -360,7 +393,9 @@ function Home() {
                 <p className="label-track">{title}</p>
                 <p
                   className={`mt-2 max-w-xs overflow-hidden text-[15px] leading-[1.8] opacity-70 transition-all duration-700 ease-out ${
-                    feature === i ? "max-h-32 opacity-70" : "max-h-0 opacity-0 md:max-h-32 md:opacity-40"
+                    feature === i
+                      ? "max-h-32 opacity-70"
+                      : "max-h-0 opacity-0 md:max-h-32 md:opacity-40"
                   }`}
                 >
                   {body}
@@ -399,7 +434,7 @@ function Home() {
 
           <div className="mt-12 hidden gap-10 md:grid md:grid-cols-3">
             {bestsellers.map((p, i) => (
-              <Reveal key={p.name} delay={i * 120}>
+              <Reveal key={p.name} delay={i * 120} className="h-full">
                 <ProductCard {...p} />
               </Reveal>
             ))}
@@ -452,7 +487,7 @@ function Home() {
               to="/product/$slug"
               params={{ slug: r.product }}
               hash="ritual"
-                className="group relative block h-[420px] overflow-hidden bg-parchment text-ivory"
+              className="group relative block h-[420px] overflow-hidden bg-parchment text-ivory"
             >
               <img
                 src={r.img}
@@ -538,7 +573,7 @@ function ProductCard({
   img: string;
 }) {
   return (
-    <article className="group bg-ivory">
+    <article className="group flex h-full flex-col bg-ivory">
       <div className="aspect-[4/5] overflow-hidden">
         <img
           src={img}
@@ -547,14 +582,15 @@ function ProductCard({
           className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.05]"
         />
       </div>
-      <div className="px-5 py-6">
+      <div className="flex flex-1 flex-col px-5 py-6">
         <h3 className="font-display text-[20px] lowercase">{name}</h3>
-        <p className="mt-2 text-[14px] leading-[1.7] text-muted-foreground">{descriptor}</p>
-        <p className="mt-4 text-[15px]">{price}</p>
+        <p className="mt-2 mb-4 text-[14px] leading-[1.7] text-muted-foreground">{descriptor}</p>
+        {/* Price and link sit at the card's foot so they line up across the row. */}
+        <p className="mt-auto mb-6 text-[15px]">{price}</p>
         <Link
           to="/product/$slug"
           params={{ slug }}
-          className="label-track mt-6 inline-flex items-center gap-2 border-b border-espresso/30 pb-1 transition-opacity duration-500 hover:opacity-60"
+          className="label-track inline-flex items-center gap-2 self-start border-b border-espresso/30 pb-1 transition-opacity duration-500 hover:opacity-60"
         >
           <BagIcon className="h-4 w-4" /> shop now
         </Link>

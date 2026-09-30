@@ -68,13 +68,52 @@ const glyphs: Record<AuraName, ReactElement> = {
 export function AuraGlyph({
   aura,
   className = "h-10 w-10",
+  strokeWidth = base.strokeWidth,
 }: {
   aura: AuraName;
   className?: string;
+  strokeWidth?: number;
 }) {
   return (
-    <svg {...base} className={className} aria-hidden="true">
+    <svg {...base} strokeWidth={strokeWidth} className={className} aria-hidden="true">
       {glyphs[aura]}
     </svg>
+  );
+}
+
+/**
+ * An aura glyph set in a thin circle. Place it inside a `group` element: on hover the
+ * circle fills and a soft ring ripples outward. `tone="light"` is for dark backgrounds,
+ * where the ring ripples continuously.
+ */
+export function AuraMedallion({
+  aura,
+  tone = "dark",
+  className = "h-16 w-16",
+}: {
+  aura: AuraName;
+  tone?: "dark" | "light";
+  className?: string;
+}) {
+  const skin =
+    tone === "dark"
+      ? "border-espresso/30 text-espresso group-hover:border-espresso group-hover:bg-espresso group-hover:text-ivory"
+      : "border-ivory/45 text-ivory bg-ivory/5";
+  return (
+    <span
+      aria-hidden="true"
+      className={`relative inline-flex shrink-0 items-center justify-center rounded-full border transition-colors duration-700 ease-out ${skin} ${className}`}
+    >
+      <span
+        className={`aura-ripple pointer-events-none absolute inset-0 rounded-full border ${
+          tone === "dark" ? "border-espresso/40" : "aura-ripple-always border-ivory/50"
+        }`}
+      />
+      <AuraGlyph
+        aura={aura}
+        strokeWidth={1.3}
+        className="h-[58%] w-[58%] transition-transform duration-700 ease-out group-hover:scale-110"
+      />
+    </span>
   );
 }
