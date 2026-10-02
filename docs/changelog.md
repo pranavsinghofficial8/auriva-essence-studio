@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: Google sign-in set up
+
+- Created the Google OAuth client (project "Auriva", consent screen External, in Testing) and
+  tested a real "Continue with Google" sign-in locally. The client ID lives in `.env.local`.
+- `google-sign-in.md` now records the current setup and what's left for launch, follows
+  Google's new **Google Auth Platform** screens, and no longer mentions Lovable.
+
 ## 2026-10-02: moved off Lovable
 
 - Development now happens only in Claude Code. Removed the Lovable sync rules (`AGENTS.md`),

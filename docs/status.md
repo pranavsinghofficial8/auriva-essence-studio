@@ -1,6 +1,6 @@
 # Status and next steps
 
-Where the project stands as of 2026-10-02. Read this first when picking the work up; update it
+Where the project stands as of 2026-10-03. Read this first when picking the work up; update it
 whenever an item below is done or a new one appears. How the code works is in `CLAUDE.md` and the
 other docs in this folder; what changed and when is in `changelog.md`.
 
@@ -24,7 +24,7 @@ other docs in this folder; what changed and when is in `changelog.md`.
 | Hosting           | Where to deploy now that Lovable is gone. The build targets Cloudflare Workers (nitro), so that's the easiest fit; Vercel or Netlify also work. The old site at `auriva-essence-studio.lovable.app` no longer receives changes. | Set up deploys; set `VITE_API_URL` and `VITE_GOOGLE_CLIENT_ID` in the build environment.                                                 |
 | Domain            | The real domain (e.g. auriva.in).                                                                                                                                                                                               | Replace the `lovable.app` canonical and `og:url` links in `routes/about.tsx`, `routes/journal/index.tsx` and `routes/journal/$slug.tsx`. |
 | Payments          | Razorpay or Stripe, agreed with the backend developer (see "Decisions to settle" in `backend-handoff.md`).                                                                                                                      | Build the pay step at checkout once `POST /orders` returns a payment session. Blocks launch.                                             |
-| Google sign-in    | A Google OAuth client ID (steps in `google-sign-in.md`).                                                                                                                                                                        | Put it in `VITE_GOOGLE_CLIENT_ID` and click through a real sign-in. The backend must implement `POST /auth/google`.                      |
+| Google sign-in    | Done locally (client ID set up and tested on 2026-10-03). For launch: add the live address and domain to the client's JavaScript origins and publish the consent screen (see `google-sign-in.md`).                              | Set `VITE_GOOGLE_CLIENT_ID` in the host's build environment. The backend must implement `POST /auth/google`.                             |
 | Fragrance photos  | Photos evoking Jasmine, Palo Santo, Sandalwood, Oudh, and Camphor & Tulsi (landscape). The other five have one.                                                                                                                 | Add each to `src/assets/` and set `ritualImage` for that product in `lib/auriva-catalog.ts`.                                             |
 | Backend decisions | Guest checkout, shipping and tax, content management, emails, order ids (the decisions table in `backend-handoff.md`).                                                                                                          | Adjust `types.ts`, the handoff doc and the UI as each is decided.                                                                        |
 
