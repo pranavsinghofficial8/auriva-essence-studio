@@ -2,12 +2,12 @@
 
 Auriva is a marketing and storefront site for a premium incense and home-fragrance brand
 ("from petal to presence"). The design brief lives in `README.md`: editorial, unhurried, luxury
-maison (Aesop, Diptyque, COS). **It is front-end only. There is no backend, database or payments.**
+maison (Aesop, Diptyque, COS). This repo is the storefront only. The backend is being built
+separately against the contract in `backend-handoff.md`; until it's connected, an in-browser mock
+stands in. Payments aren't built yet.
 
-> [!IMPORTANT]
-> This repo is synced with [Lovable](https://lovable.dev) (see `AGENTS.md`). Never force-push or
-> rewrite pushed history. Every commit pushed to `main` shows up in the Lovable editor, so keep
-> `main` building.
+The site was started in Lovable and is now developed only with Claude Code; the Lovable sync is no
+longer used. Keep `main` building, and don't rewrite pushed history.
 
 ## Commands
 
@@ -20,8 +20,9 @@ npm run lint       # eslint (includes prettier as a rule)
 npm run format     # prettier --write .
 ```
 
-There is no test suite. `bun.lock` is the committed lockfile (Lovable uses bun); `bunfig.toml`
-has a 24h minimum-release-age guard, so don't add packages to its exclude list without asking.
+There is no test suite. npm is the package manager and `package-lock.json` the lockfile (use
+`npm ci` for a clean install). `.claude/launch.json` defines the `dev` preview server for
+Claude Code.
 
 ## Stack
 
@@ -30,13 +31,16 @@ has a 24h minimum-release-age guard, so don't add packages to its exclude list w
   `exactOptionalPropertyTypes`)
 - **Tailwind CSS v4** (CSS-first config in `src/styles.css`, no `tailwind.config.*`)
 - **shadcn/ui** (new-york style, Radix primitives) in `src/components/ui/`
-- TanStack Query is wired up in the root route but not used for data yet
-- `lucide-react` icons, `zod` / `react-hook-form` available but not used by app code
+- **TanStack Query** for the visitor's account, bag and orders (`lib/api/hooks.ts`)
+- **zod** for form validation (checkout); `lucide-react` and `react-hook-form` are installed
+  but unused
 - Build and deploy via **nitro**, Cloudflare target by default
 
-`vite.config.ts` uses `@lovable.dev/vite-tanstack-config`, which already registers tanstackStart,
-React, Tailwind, tsconfig paths, nitro, the `@` alias and `VITE_*` env injection. **Do not add
-those plugins again**; pass extra config through `defineConfig({ vite: { ... } })`.
+`vite.config.ts` uses `@lovable.dev/vite-tanstack-config`, an ordinary npm package (a leftover
+from Lovable, still the build setup) that registers tanstackStart, React, Tailwind, tsconfig
+paths, nitro, the `@` alias and `VITE_*` env injection. **Do not add those plugins again**; pass
+extra config through `defineConfig({ vite: { ... } })`. Replacing it means writing those plugins
+into `vite.config.ts` by hand.
 
 ## Structure
 
@@ -58,23 +62,26 @@ src/
   lib/
     auriva-catalog.ts     static product + category data (types Product, Category, AuraName)
     auriva-journal.ts     static journal posts
-    auriva-store.ts       localStorage "commerce": account, bag, last order + React hooks
+    api/                  the ONLY way pages get or change data (see "Data layer" below)
     preload-image.ts      preloadImage(): await in loaders so a page's first photo is ready
+    google-auth.ts        loads Google's "Sign in with Google" script; decodes tokens for the mock
     utils.ts              cn() helper (clsx + tailwind-merge)
-    error-*.ts, lovable-error-reporting.ts   SSR error page and Lovable telemetry hooks
-  assets/                 images imported as modules; *.asset.json = Lovable-hosted assets
+    error-*.ts            SSR error capture and the branded 500 page
+  assets/                 images imported as modules
   router.tsx              createRouter: QueryClient context, crossfade + hover-preload defaults
   start.ts                TanStack Start instance: error middleware + CSRF for server fns
   server.ts               custom SSR entry wrapping errors into a branded 500 page
   styles.css              Tailwind v4 theme, brand tokens, custom utilities, keyframes
 pc/                       loose reference images (not imported by the app)
-docs/                     this guide plus architecture, user flows, design system, changelog
+docs/                     this guide, status, architecture, user flows, design system, backend
+                          contract, Google sign-in, changelog
 CLAUDE.md                 root pointer that imports this file (Claude Code loads it from root)
-AGENTS.md, README.md      Lovable sync rules and the original design brief (kept at root)
+README.md                 the original design brief and how to run the project
 ```
 
-See `architecture.md`, `user-flows.md`, `design-system.md` and `changelog.md` in this folder
-for detail.
+Start with `status.md` (where things stand and what's next). See `architecture.md`,
+`user-flows.md`, `design-system.md`, `backend-handoff.md`, `google-sign-in.md` and `changelog.md`
+in this folder for detail.
 
 ## Key components and data flow
 
@@ -97,14 +104,23 @@ for detail.
   inside a `group`; `tone="light"` for dark backgrounds), `story-marks.tsx` (About page icons).
   All are thin-line inline SVGs. On light backgrounds use the medallion or a dark stroke; the
   bare glyph in `text-taupe` is too faint to read.
-- **Catalog**: pages read directly from `auriva-catalog.ts` / `auriva-journal.ts`. Dynamic
-  routes resolve data in `loader` and `throw notFound()` for unknown slugs. Each product has a
-  `ritual` (the invitation shown in its product page's aura band, `#ritual`) and an optional
-  `ritualImage` (that band's background, which should evoke the fragrance; it falls back to the
-  category banner).
-- **Store** (`auriva-store.ts`): `useAccount()` and `useBag()` subscribe to localStorage via a
-  custom `auriva:store` window event plus `storage`. Sign-in just saves `{ name, email }`, and
-  checkout simulates a delay and then saves the order. Any real commerce work replaces this module.
+- **Data layer** (`src/lib/api/`): every read and write goes through it; pages never import the
+  catalog, journal or localStorage directly.
+  - `index.ts`: one async function per backend endpoint (`getProductPage`, `addToCart`,
+    `placeOrder`, …). With `VITE_API_URL` set it calls the real backend (`client.ts`: JSON,
+    cookies, `ApiError`); without it, `mock.ts` answers in the browser (catalog and journal from
+    code; account, bag and orders in localStorage).
+  - `hooks.ts`: TanStack Query hooks for the visitor's own state (`useUser`, `useCart`,
+    `useCartActions`, `useAuthActions`, `useOrders`, `useOrder`, `usePlaceOrder`). They share
+    the per-request `QueryClient` from `router.tsx`, so the nav, bag and checkout stay in sync.
+  - Public data (catalog, journal) is fetched in route `loader`s, including during SSR. Visitor
+    state loads in the browser; SSR renders the signed-out state.
+  - Show pending and error states for every mutation (`isPending`, `errorMessage(error)`).
+  - The endpoint contract is `backend-handoff.md`. Keep `types.ts` and that document in sync.
+- **Catalog content**: each product has a `ritual` (the invitation shown in its product page's
+  aura band, `#ritual`) and an optional `ritualImage` (that band's background, which should
+  evoke the fragrance; it falls back to the category banner). Unknown slugs make loaders
+  `throw notFound()`.
 
 ## Conventions
 
@@ -153,28 +169,27 @@ for detail.
   outline or text-with-arrow CTAs, slow 300–500ms ease transitions, and every section stacks
   cleanly on mobile. Check every visual change at phone (375px), tablet (768px) and desktop
   widths.
-- **Assets**: import images from `@/assets/*` (they resolve to URLs). `*.asset.json` files point
-  at Lovable-hosted copies that 404 on the local dev server, so commit the real file and import
-  that instead (the logos are done this way; their `.asset.json` files are now unused).
+- **Assets**: commit images under `src/assets/` and import them from `@/assets/*` (they resolve
+  to URLs).
 - **Currency** is INR (₹); prices are plain numbers in the catalog.
 
 ## Known issues (pre-existing, not blocking the build)
 
-- `npx tsc --noEmit` reports `TS18046` (`error` is `unknown`) in the `errorComponent`s of
-  `journal/$slug.tsx`, `product/$slug.tsx` and `shop/$category.tsx`, and a matching `TS2322` on
-  the root `ErrorComponent` in `__root.tsx`. Vite builds regardless.
-- `npm run lint` reports 21 Prettier-only formatting errors (all auto-fixable with
-  `npx eslint . --fix`) in `Footer.tsx`, `Nav.tsx`, `marks.tsx`, `auriva-journal.ts`, `cart.tsx`,
-  `checkout.tsx`, `contact.tsx` and the journal routes, and `styles.css` fails
-  `prettier --check`. They date from the Lovable-generated code.
+- `npx tsc --noEmit` is clean.
+- `npm run lint` reports 7 Prettier-only formatting errors (auto-fixable with
+  `npx eslint . --fix`) in `Footer.tsx`, `Nav.tsx`, `marks.tsx` and `auriva-journal.ts`, and
+  `styles.css` fails `prettier --check`. They date from the original Lovable-generated code.
 - Fast-refresh warnings: `Reveal.tsx` exports the `useReveal` hook alongside components, and
   several shadcn `ui/` files export variants.
-- The `*.asset.json` logo files are unused since the logos were committed as PNGs.
 
 ## Backend / environment
 
-- No Supabase, no API calls, no server functions (`createServerFn` unused), no env vars read in
-  `src/`. Auth, bag and orders are browser-only (localStorage). The contact form only sets local
-  `sent` state, so nothing is actually sent anywhere.
-- `.env*` is not committed (`*.local` and `.dev.vars` are gitignored). If you add env vars,
-  client-exposed ones must be prefixed `VITE_` and read via `import.meta.env`.
+- The backend is being built separately against `backend-handoff.md`. Until `VITE_API_URL` is
+  set, `src/lib/api/mock.ts` stands in: nothing leaves the browser, the Google ID token is only
+  sanity-checked (the real backend verifies it), and contact or journal submissions go
+  nowhere. Don't rely on the mock for anything security-sensitive.
+- Env vars (public; typed in `src/vite-env.d.ts`, listed in `.env.example`; read at build time):
+  - `VITE_API_URL`: the backend base URL. Unset means the in-browser mock.
+  - `VITE_GOOGLE_CLIENT_ID`: enables "Continue with Google" (see `google-sign-in.md`).
+
+  Use `.env.local` locally (`*.local` is gitignored).

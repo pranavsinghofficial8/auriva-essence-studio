@@ -4,6 +4,7 @@ import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
 import { HeroSmoke } from "@/components/auriva/HeroSmoke";
 import { Reveal, RevealWords } from "@/components/auriva/Reveal";
+import { getProducts } from "@/lib/api";
 import { AuraMark, BagIcon, PetalMark, SigilMark, SmokeMark } from "@/components/auriva/marks";
 
 import heroLotus from "@/assets/hero-lotus.jpg";
@@ -21,9 +22,6 @@ import ritualStillness from "@/assets/ritual-stillness.jpg";
 import ritualClarity from "@/assets/ritual-clarity.jpg";
 import ritualGrounding from "@/assets/ritual-grounding.jpg";
 import ritualComfort from "@/assets/ritual-comfort.jpg";
-import prodNagchampa from "@/assets/prod-nagchampa.jpg";
-import prodOudh from "@/assets/prod-oudh.jpg";
-import prodCoconutCinnamon from "@/assets/prod-coconut-cinnamon.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,6 +42,10 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  // Bestsellers are one section of many: if they fail to load, leave them out, not the page.
+  loader: async () => ({
+    featured: await getProducts({ featured: "bestseller" }).catch(() => []),
+  }),
   component: Home,
 });
 
@@ -60,29 +62,12 @@ const categories = [
   },
 ] as const;
 
-const bestsellers = [
-  {
-    slug: "nagchampa",
-    name: "nagchampa",
-    descriptor: "lotus, cedar and warm resin — for the morning hour.",
-    price: "₹195",
-    img: prodNagchampa,
-  },
-  {
-    slug: "oudh",
-    name: "oudh",
-    descriptor: "vetiver and dried petal — a slower, denser drift.",
-    price: "₹185",
-    img: prodOudh,
-  },
-  {
-    slug: "coconut-cinnamon",
-    name: "coconut & cinnamon",
-    descriptor: "sandal and amber — grounding, resinous, deep.",
-    price: "₹225",
-    img: prodCoconutCinnamon,
-  },
-];
+/** Editorial one-liners for the bestseller cards; names, prices and photos come from the API. */
+const bestsellerCopy: Record<string, string> = {
+  nagchampa: "lotus, cedar and warm resin — for the morning hour.",
+  oudh: "vetiver and dried petal — a slower, denser drift.",
+  "coconut-cinnamon": "sandal and amber — grounding, resinous, deep.",
+};
 
 /** Link props for hash links within the homepage: glide to the section, no crossfade. */
 const samePageScroll = {
@@ -203,7 +188,15 @@ function PhotoTile({ src, alt }: { src: string; alt: string }) {
 function Home() {
   const [slide, setSlide] = useState(0);
   const [feature, setFeature] = useState(0);
-  const current = bestsellers[slide] ?? bestsellers[0]!;
+  const { featured } = Route.useLoaderData();
+  const bestsellers = featured.map((p) => ({
+    slug: p.slug,
+    name: p.name.toLowerCase(),
+    descriptor: bestsellerCopy[p.slug] ?? p.oneLiner.toLowerCase(),
+    price: `₹${p.price}`,
+    img: p.image,
+  }));
+  const current = bestsellers[slide] ?? bestsellers[0];
 
   return (
     <div id="top" className="bg-background">
@@ -407,66 +400,66 @@ function Home() {
       </section>
 
       {/* 6 — BESTSELLERS */}
-      <section className="grid lg:grid-cols-[38%_62%]">
-        <div className="relative min-h-[320px] overflow-hidden bg-stone lg:min-h-[560px]">
-          <img
-            src={bestsellerPanel}
-            alt="Auriva incense arranged on warm neutral linen"
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-          <span
-            className="pointer-events-none absolute top-1/2 left-0 font-display text-[44px] tracking-[0.3em] whitespace-nowrap text-ivory/70 lowercase lg:text-[62px]"
-            style={{
-              transform: "rotate(-90deg) translate(-50%, -0.2em)",
-              transformOrigin: "left top",
-            }}
-          >
-            bestsellers
-          </span>
-        </div>
-
-        <div className="bg-parchment px-6 py-16 sm:px-14 sm:py-20">
-          <p className="label-track text-muted-foreground">our bestsellers</p>
-          <h2 className="mt-5 max-w-md font-display text-[30px] leading-tight lowercase">
-            rituals loved. scents remembered.
-          </h2>
-
-          <div className="mt-12 hidden gap-10 md:grid md:grid-cols-3">
-            {bestsellers.map((p, i) => (
-              <Reveal key={p.name} delay={i * 120} className="h-full">
-                <ProductCard {...p} />
-              </Reveal>
-            ))}
-          </div>
-
-          <div className="mt-10 md:hidden">
-            <ProductCard {...current} />
-          </div>
-
-          <div className="mt-10 flex items-center gap-6 md:hidden">
-            <button
-              type="button"
-              aria-label="Previous product"
-              onClick={() => setSlide((s) => (s + bestsellers.length - 1) % bestsellers.length)}
-              className="label-track transition-opacity duration-300 hover:opacity-50"
+      {bestsellers.length ? (
+        <section className="grid lg:grid-cols-[38%_62%]">
+          <div className="relative min-h-[320px] overflow-hidden bg-stone lg:min-h-[560px]">
+            <img
+              src={bestsellerPanel}
+              alt="Auriva incense arranged on warm neutral linen"
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+            <span
+              className="pointer-events-none absolute top-1/2 left-0 font-display text-[44px] tracking-[0.3em] whitespace-nowrap text-ivory/70 lowercase lg:text-[62px]"
+              style={{
+                transform: "rotate(-90deg) translate(-50%, -0.2em)",
+                transformOrigin: "left top",
+              }}
             >
-              ←
-            </button>
-            <span className="label-track text-muted-foreground">
-              {slide + 1} / {bestsellers.length}
+              bestsellers
             </span>
-            <button
-              type="button"
-              aria-label="Next product"
-              onClick={() => setSlide((s) => (s + 1) % bestsellers.length)}
-              className="label-track transition-opacity duration-300 hover:opacity-50"
-            >
-              →
-            </button>
           </div>
-        </div>
-      </section>
+
+          <div className="bg-parchment px-6 py-16 sm:px-14 sm:py-20">
+            <p className="label-track text-muted-foreground">our bestsellers</p>
+            <h2 className="mt-5 max-w-md font-display text-[30px] leading-tight lowercase">
+              rituals loved. scents remembered.
+            </h2>
+
+            <div className="mt-12 hidden gap-10 md:grid md:grid-cols-3">
+              {bestsellers.map((p, i) => (
+                <Reveal key={p.name} delay={i * 120} className="h-full">
+                  <ProductCard {...p} />
+                </Reveal>
+              ))}
+            </div>
+
+            <div className="mt-10 md:hidden">{current ? <ProductCard {...current} /> : null}</div>
+
+            <div className="mt-10 flex items-center gap-6 md:hidden">
+              <button
+                type="button"
+                aria-label="Previous product"
+                onClick={() => setSlide((s) => (s + bestsellers.length - 1) % bestsellers.length)}
+                className="label-track transition-opacity duration-300 hover:opacity-50"
+              >
+                ←
+              </button>
+              <span className="label-track text-muted-foreground">
+                {slide + 1} / {bestsellers.length}
+              </span>
+              <button
+                type="button"
+                aria-label="Next product"
+                onClick={() => setSlide((s) => (s + 1) % bestsellers.length)}
+                className="label-track transition-opacity duration-300 hover:opacity-50"
+              >
+                →
+              </button>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* 7 — RITUAL COLLECTION */}
       <section id="rituals" className="scroll-mt-24 bg-ivory px-6 py-24 sm:px-10 sm:py-32">

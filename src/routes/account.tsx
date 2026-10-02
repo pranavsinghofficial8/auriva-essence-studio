@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { getLastOrder, signOut, useAccount, useBag } from "@/lib/auriva-store";
+import { useAuthActions, useCart, useOrders, useUser } from "@/lib/api/hooks";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
@@ -23,10 +23,12 @@ export const Route = createFileRoute("/account")({
 });
 
 function AccountPage() {
-  const account = useAccount();
-  const { count, subtotal } = useBag();
+  const { user: account, isLoading } = useUser();
+  const { count, subtotal } = useCart();
+  const { orders } = useOrders();
+  const { signOut } = useAuthActions();
   const navigate = useNavigate();
-  const order = typeof window !== "undefined" ? getLastOrder() : null;
+  const order = orders[0] ?? null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,7 +37,11 @@ function AccountPage() {
       <main className="mx-auto w-full max-w-[1400px] px-6 pt-36 pb-28 sm:px-10 sm:pt-44">
         <p className="label-track text-muted-foreground">account</p>
 
-        {!account ? (
+        {isLoading ? (
+          <p className="mt-10 text-muted-foreground" aria-live="polite">
+            One moment…
+          </p>
+        ) : !account ? (
           <>
             <h1 className="mt-6 text-[38px] leading-[1.05] lowercase sm:text-[60px]">
               you're signed out
@@ -49,10 +55,23 @@ function AccountPage() {
           </>
         ) : (
           <>
-            <h1 className="mt-6 text-[38px] leading-[1.05] lowercase sm:text-[60px]">
-              {account.name.toLowerCase()}
-            </h1>
-            <p className="mt-4 text-muted-foreground">{account.email}</p>
+            <div className="mt-6 flex items-center gap-5 sm:gap-7">
+              {account.picture ? (
+                <img
+                  src={account.picture}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="h-14 w-14 shrink-0 rounded-full object-cover sm:h-16 sm:w-16"
+                />
+              ) : null}
+              <h1 className="text-[38px] leading-[1.05] lowercase sm:text-[60px]">
+                {account.name.toLowerCase()}
+              </h1>
+            </div>
+            <p className="mt-4 text-muted-foreground">
+              {account.email}
+              {account.provider === "google" ? " · signed in with Google" : ""}
+            </p>
 
             <div className="mt-16 grid gap-10 sm:grid-cols-2">
               <div className="bg-secondary p-10">
@@ -78,6 +97,7 @@ function AccountPage() {
                     </p>
                     <Link
                       to="/order-confirmation"
+                      search={{ id: order.id }}
                       className="label-track mt-8 inline-block border-b border-foreground/40 pb-1 transition-opacity duration-500 hover:opacity-60"
                     >
                       view order →
@@ -93,10 +113,8 @@ function AccountPage() {
 
             <button
               type="button"
-              onClick={() => {
-                signOut();
-                navigate({ to: "/" });
-              }}
+              onClick={() => signOut.mutate(undefined, { onSuccess: () => navigate({ to: "/" }) })}
+              disabled={signOut.isPending}
               className="label-track mt-16 border border-foreground/30 px-10 py-5 transition-colors duration-500 hover:bg-secondary"
             >
               sign out

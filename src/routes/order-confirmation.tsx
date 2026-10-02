@@ -2,10 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { getLastOrder, type Order } from "@/lib/auriva-store";
-import { useEffect, useState } from "react";
+import type { Address } from "@/lib/api";
+import { useOrder } from "@/lib/api/hooks";
 
 export const Route = createFileRoute("/order-confirmation")({
+  validateSearch: (search: Record<string, unknown>): { id?: string } =>
+    typeof search["id"] === "string" && search["id"] ? { id: search["id"] } : {},
   head: () => ({
     meta: [
       { title: "Order Confirmed — Auriva" },
@@ -24,8 +26,8 @@ export const Route = createFileRoute("/order-confirmation")({
 });
 
 function ConfirmationPage() {
-  const [order, setOrder] = useState<Order | null>(null);
-  useEffect(() => setOrder(getLastOrder()), []);
+  const { id } = Route.useSearch();
+  const { order, isLoading } = useOrder(id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,7 +43,11 @@ function ConfirmationPage() {
           before it leaves us — you will receive a note by email when it does.
         </p>
 
-        {order ? (
+        {isLoading && id ? (
+          <p className="mt-16 text-muted-foreground" aria-live="polite">
+            Finding your order…
+          </p>
+        ) : order ? (
           <div className="mx-auto mt-16 max-w-lg bg-secondary p-10 text-left">
             <div className="flex justify-between">
               <p className="label-track text-muted-foreground">order</p>
@@ -62,7 +68,7 @@ function ConfirmationPage() {
               <span className="tabular-nums">₹{order.total}</span>
             </div>
             <p className="mt-8 text-[14px] leading-[1.9] text-muted-foreground">
-              Delivering to {order.address || "—"}
+              Delivering to {formatAddress(order.address)}
             </p>
           </div>
         ) : null}
@@ -78,4 +84,10 @@ function ConfirmationPage() {
       <Footer />
     </div>
   );
+}
+
+function formatAddress(a: Address) {
+  return [a.fullName, a.line1, a.line2, `${a.city}, ${a.state} ${a.pincode}`, a.phone]
+    .filter(Boolean)
+    .join(" · ");
 }

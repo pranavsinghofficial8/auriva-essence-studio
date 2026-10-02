@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { categories, promises } from "@/lib/auriva-catalog";
+import { promises } from "@/lib/auriva-catalog";
+import { getCategories } from "@/lib/api";
 
 export const Route = createFileRoute("/shop/")({
+  loader: async () => ({ categories: await getCategories() }),
   head: () => ({
     meta: [
       { title: "Shop Incense — Sticks, Cones & Bambooless | Auriva" },
@@ -26,6 +28,7 @@ export const Route = createFileRoute("/shop/")({
 });
 
 function ShopIndex() {
+  const { categories } = Route.useLoaderData();
   return (
     <div className="bg-background">
       <Nav threshold={80} />

@@ -2,6 +2,47 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-02: moved off Lovable
+
+- Development now happens only in Claude Code. Removed the Lovable sync rules (`AGENTS.md`),
+  `.lovable/`, the Lovable editor error reporting and the unused `*.asset.json` logo links.
+- npm is the package manager: `package-lock.json` is committed, and `bun.lock` and `bunfig.toml`
+  are removed. `.claude/launch.json` (the Claude Code preview server) is committed.
+- `@lovable.dev/vite-tanstack-config` stays for now: it's the build setup, an ordinary npm
+  package that works without Lovable.
+
+## 2026-10-01: API layer and backend handoff
+
+- **`src/lib/api/`:** every page now reads and writes data through one layer. Each function calls
+  the real backend when `VITE_API_URL` is set, and falls back to an in-browser mock otherwise,
+  so the site works before the backend exists. The contract for the backend developer is
+  `docs/backend-handoff.md`.
+- The account, bag and orders use TanStack Query hooks (`useUser`, `useCart`, mutations),
+  replacing `lib/auriva-store.ts`. The nav, bag, checkout and account page stay in sync.
+- Loading, pending and error states throughout: sign-in and sign-up, add to bag, bag
+  quantities, checkout, and the contact and journal forms. A backend outage no longer breaks
+  the homepage (the bestsellers section is just left out).
+- Checkout now collects a structured Indian address (name, mobile, lines, city, state, PIN)
+  with validation, and shows server field errors. The order confirmation lives at
+  `/order-confirmation?id=…` and survives a refresh.
+- The sign-in form now sends the password, and Google sign-in sends its token to the backend
+  to verify.
+- The contact and "share your ritual" forms now submit (`POST /contact`,
+  `POST /journal/stories`).
+- Fixed the four long-standing type errors (error screens); `tsc` is clean.
+
+## 2026-10-01: Google sign-in
+
+- `/auth` offers Google's official "Continue with Google" button (Google Identity Services,
+  popup) above the email form, with an "or" divider, in both sign-in and create-account modes.
+- The ID token is accepted only if it's for this site's client ID, issued by Google, unexpired
+  and has a verified email. The name, email and photo become the browser-only account
+  (`provider: "google"`).
+- The account page shows the Google profile photo and "signed in with Google". Signing out also
+  tells Google not to sign the visitor back in automatically.
+- Configured by `VITE_GOOGLE_CLIENT_ID` (see `docs/google-sign-in.md` and `.env.example`). The
+  button stays hidden until it's set.
+
 ## 2026-09-30: consistency, product pages and documentation
 
 ### Documentation

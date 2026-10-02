@@ -1,29 +1,26 @@
 import { useState } from "react";
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
-import { addToBag, useAccount } from "@/lib/auriva-store";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
 import { AuraGlyph, AuraMedallion } from "@/components/auriva/aura-marks";
 import { BagIcon } from "@/components/auriva/marks";
-import type { Category, Product } from "@/lib/auriva-catalog";
-import { getCategory, getProduct, products, promises } from "@/lib/auriva-catalog";
+import { promises } from "@/lib/auriva-catalog";
+import { errorMessage, getProductPage } from "@/lib/api";
+import { useCartActions, useUser } from "@/lib/api/hooks";
 import { preloadImage } from "@/lib/preload-image";
 
 export const Route = createFileRoute("/product/$slug")({
-  loader: async ({
-    params,
-  }): Promise<{ product: Product; category: Category; related: Product[] }> => {
-    const product = getProduct(params.slug);
-    if (!product) throw notFound();
-    const category = getCategory(product.category)!;
-    const related = products.filter((p) => p.slug !== product.slug).slice(0, 4);
+  loader: async ({ params }) => {
+    const page = await getProductPage(params.slug);
+    if (!page) throw notFound();
+    const { product, category } = page;
     // Fetch the photos a visitor lands on (the top, or #ritual from the ritual
     // cards) before the page crossfades in, so neither pops in afterwards.
     await Promise.all([
       preloadImage(product.image),
       preloadImage(product.ritualImage ?? category.banner),
     ]);
-    return { product, category, related };
+    return page;
   },
   head: ({ loaderData }) => {
     const p = loaderData?.product;
@@ -54,19 +51,16 @@ export const Route = createFileRoute("/product/$slug")({
   ),
   errorComponent: ({ error }) => (
     <div role="alert" className="flex min-h-screen items-center justify-center px-6 text-center">
-      <p className="text-muted-foreground">{error.message}</p>
+      <p className="text-muted-foreground">{errorMessage(error)}</p>
     </div>
   ),
   component: ProductPage,
 });
 
 function ProductPage() {
-  const { product, category, related } = Route.useLoaderData() as {
-    product: Product;
-    category: Category;
-    related: Product[];
-  };
-  const account = useAccount();
+  const { product, category, related } = Route.useLoaderData();
+  const { user: account } = useUser();
+  const { add } = useCartActions();
   const navigate = useNavigate();
   const [added, setAdded] = useState(false);
 
@@ -75,9 +69,15 @@ function ProductPage() {
       navigate({ to: "/auth" });
       return;
     }
-    addToBag(product.slug, 1);
-    setAdded(true);
-    window.setTimeout(() => setAdded(false), 2400);
+    add.mutate(
+      { slug: product.slug },
+      {
+        onSuccess: () => {
+          setAdded(true);
+          window.setTimeout(() => setAdded(false), 2400);
+        },
+      },
+    );
   };
 
   return (
@@ -153,12 +153,24 @@ function ProductPage() {
             <button
               type="button"
               onClick={onAdd}
+              disabled={add.isPending}
               aria-live="polite"
-              className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85"
+              className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
             >
               <BagIcon className="h-4 w-4" />
-              {added ? "Added to Bag" : account ? "Add to Bag" : "Sign in to Add"}
+              {add.isPending
+                ? "adding to your bag…"
+                : added
+                  ? "added to bag"
+                  : account
+                    ? "add to bag"
+                    : "sign in to add"}
             </button>
+            {add.error ? (
+              <p role="alert" className="text-[14px] text-destructive">
+                {errorMessage(add.error)}
+              </p>
+            ) : null}
             {added ? (
               <Link
                 to="/cart"

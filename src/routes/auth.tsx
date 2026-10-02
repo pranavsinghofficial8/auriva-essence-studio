@@ -3,7 +3,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { signIn } from "@/lib/auriva-store";
+import { GoogleSignIn } from "@/components/auriva/GoogleSignIn";
+import { errorMessage } from "@/lib/api";
+import { useAuthActions } from "@/lib/api/hooks";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -28,11 +30,27 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const { signIn, signUp, signInWithGoogle } = useAuthActions();
+
+  const toBag = () => navigate({ to: "/cart" });
+  const formAction = mode === "signin" ? signIn : signUp;
+  const pending = formAction.isPending || signInWithGoogle.isPending;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    signIn({ name: name.trim() || email.split("@")[0] || "friend", email: email.trim() });
-    navigate({ to: "/cart" });
+    signInWithGoogle.reset();
+    if (mode === "signin") {
+      signIn.mutate({ email: email.trim(), password }, { onSuccess: toBag });
+    } else {
+      signUp.mutate({ name: name.trim(), email: email.trim(), password }, { onSuccess: toBag });
+    }
+  };
+
+  const switchMode = () => {
+    signIn.reset();
+    signUp.reset();
+    setMode(mode === "signin" ? "signup" : "signin");
   };
 
   return (
@@ -50,63 +68,95 @@ function AuthPage() {
           </p>
         </div>
 
-        <form onSubmit={submit} className="max-w-md space-y-8 self-center">
-          {mode === "signup" ? (
+        <div className="w-full max-w-md space-y-8 self-center">
+          <GoogleSignIn
+            pending={signInWithGoogle.isPending}
+            error={signInWithGoogle.error ? errorMessage(signInWithGoogle.error) : null}
+            onCredential={(credential) => {
+              signIn.reset();
+              signUp.reset();
+              signInWithGoogle.mutate(credential, { onSuccess: toBag });
+            }}
+          />
+
+          <form onSubmit={submit} className="space-y-8">
+            {mode === "signup" ? (
+              <div>
+                <label htmlFor="name" className="label-track text-muted-foreground">
+                  your name
+                </label>
+                <input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="mt-3 w-full border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground"
+                />
+              </div>
+            ) : null}
+
             <div>
-              <label htmlFor="name" className="label-track text-muted-foreground">
-                your name
+              <label htmlFor="email" className="label-track text-muted-foreground">
+                email
               </label>
               <input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="mt-3 w-full border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground"
               />
             </div>
-          ) : null}
 
-          <div>
-            <label htmlFor="email" className="label-track text-muted-foreground">
-              email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="mt-3 w-full border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground"
-            />
-          </div>
+            <div>
+              <label htmlFor="password" className="label-track text-muted-foreground">
+                password
+              </label>
+              <input
+                id="password"
+                type="password"
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                minLength={mode === "signup" ? 8 : undefined}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="mt-3 w-full border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground"
+              />
+            </div>
 
-          <div>
-            <label htmlFor="password" className="label-track text-muted-foreground">
-              password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              className="mt-3 w-full border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground"
-            />
-          </div>
+            {formAction.error ? (
+              <p role="alert" className="text-[15px] text-destructive">
+                {errorMessage(formAction.error)}
+              </p>
+            ) : null}
 
-          <button
-            type="submit"
-            className="label-track w-full bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85"
-          >
-            {mode === "signin" ? "sign in" : "create account"}
-          </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className="label-track w-full bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
+            >
+              {formAction.isPending
+                ? mode === "signin"
+                  ? "signing in…"
+                  : "creating your account…"
+                : mode === "signin"
+                  ? "sign in"
+                  : "create account"}
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-            className="label-track text-muted-foreground transition-colors duration-500 hover:text-foreground"
-          >
-            {mode === "signin" ? "new here? create an account" : "already have an account? sign in"}
-          </button>
-        </form>
+            <button
+              type="button"
+              onClick={switchMode}
+              className="label-track text-muted-foreground transition-colors duration-500 hover:text-foreground"
+            >
+              {mode === "signin"
+                ? "new here? create an account"
+                : "already have an account? sign in"}
+            </button>
+          </form>
+        </div>
       </main>
 
       <Footer />

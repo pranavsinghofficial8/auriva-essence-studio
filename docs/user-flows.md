@@ -1,7 +1,9 @@
 # User flows
 
 Every page renders its own `<Nav />` and `<Footer />`. Every page change crossfades (see
-`architecture.md`). All "commerce" is simulated in the browser: nothing is sent to a server.
+`architecture.md`). All data goes through `src/lib/api/`. Until the backend is connected
+(`VITE_API_URL`), an in-browser mock answers every call, so nothing leaves the browser; after
+that, each step below calls the endpoint listed in `backend-handoff.md`.
 
 ## Global navigation
 
@@ -59,36 +61,50 @@ card → `/shop/$category`.
 4. **The ritual**: light / place / stay steps.
 5. **You may also like**: four other products.
 
-## Account, bag and checkout (browser-only)
+## Account, bag and checkout
 
 ```
-product ──add to bag──▶ signed in? ──no──▶ /auth ──submit──▶ /cart
+product ──add to bag──▶ signed in? ──no──▶ /auth ──sign in / sign up / Google──▶ /cart
                             │ yes
                             ▼
-                        bag +1 ("added to bag", "view your bag →")
+                  POST /cart/items ("adding…" → "added to bag", badge updates)
 /cart ──checkout──▶ signed in? ──no──▶ /auth
                         │ yes
                         ▼
-                    /checkout ──place order──▶ /order-confirmation
+      /checkout ──validate address──▶ POST /orders ──▶ /order-confirmation?id=AUR-…
 ```
 
-- **Sign in / create account** (`/auth`): one form that toggles between modes ("new here? create
-  an account" / "already have an account? sign in"). Submitting saves `{ name, email }` (the
-  name falls back to the email's local part) and goes to `/cart`. The password isn't stored.
-- **Add to bag** (product page): requires an account; otherwise it goes to `/auth`. It
-  increments the bag line and shows "added to bag" for about 2.4s.
-- **Bag** (`/cart`): lines with photo, name, aura and contents, +/− quantity (0 removes the line)
-  and remove, then the subtotal. Checkout goes to `/checkout`, or to `/auth` when signed out.
-  Empty bag: "your bag is empty" with a link to the shop.
-- **Checkout** (`/checkout`): a delivery address and the order summary. "place order" waits about
-  0.9s, saves the order (`AUR-` plus 6 digits, lines and total), clears the bag and goes to
-  `/order-confirmation`.
-- **Order confirmation**: "thank you, {first name}" with the saved order's lines.
-- **Account** (`/account`): signed out shows "you're signed out" and a sign-in link. Signed in
-  shows the name, the bag summary, the last order and "sign out" (which clears the account and
-  returns home).
+Every action shows a pending state (disabled button, "…ing" label) and, on failure, the
+server's message in place. Endpoints are in `backend-handoff.md`.
 
-The bag and account sync across tabs through the `storage` event.
+- **Sign in / create account** (`/auth`): Google's "Continue with Google" button (when
+  `VITE_GOOGLE_CLIENT_ID` is set), an "or" divider, then one email form that toggles between
+  modes ("new here? create an account" / "already have an account? sign in").
+  - Google: a popup, then the ID token goes to `POST /auth/google`, then `/cart`.
+  - Email: `POST /auth/login` (email, password) or `POST /auth/signup` (name, email, a password
+    of 8+ characters), then `/cart`. The mock ignores the password.
+- **Who's signed in**: `GET /auth/me`, cached by `useUser()`. The nav shows the first name or
+  "sign in", plus the bag count. Pages render signed out on the server and fill in the visitor
+  in the browser.
+- **Add to bag** (product page): requires an account; otherwise it goes to `/auth`.
+- **Bag** (`/cart`): a loading state, then lines with photo, name, aura and contents, +/−
+  quantity (0 removes the line) and remove, then the subtotal. Checkout goes to `/checkout`, or
+  to `/auth` when signed out. Empty bag: "your bag is empty" with links to sign in (if signed
+  out) and the shop.
+- **Checkout** (`/checkout`): asks for sign-in if needed. Then "ordering as {name}", a delivery
+  address form (full name, pre-filled; Indian mobile; house and street; optional area; city;
+  state from a list; 6-digit PIN code), validated field by field in the browser. The server's
+  field messages (422) show in the same places. "place order" sends `POST /orders`; the server
+  prices the bag, creates the order and empties the bag. A "demonstration checkout" note shows
+  only while the mock is in use. Payment is still to be designed (see `backend-handoff.md`).
+- **Order confirmation** (`/order-confirmation?id=…`): loads that order (`GET /orders/:id`) and
+  shows "thank you, {first name}", the lines, total and delivery address. It survives a refresh.
+- **Account** (`/account`): signed out shows "you're signed out" and a sign-in link. Signed in
+  shows the Google profile photo (if any), the name, the email ("· signed in with Google" for
+  Google accounts), the bag summary, the most recent order (`GET /orders`) with "view order →",
+  and "sign out" (`POST /auth/logout`, then home).
+
+With the mock, the bag and account sync across tabs through the `storage` event.
 
 ## Brand story (`/about`)
 
@@ -111,16 +127,19 @@ right frame instead of sliding into place.
 
 ## Journal and contact
 
-- **Journal** (`/journal`): a list of posts, then a "share your ritual" form (local state only:
-  it shows a thank-you).
+- **Journal** (`/journal`): a list of posts (`GET /journal`), then a "share your ritual" form
+  (`POST /journal/stories`) that shows a thank-you once sent.
 - **Post** (`/journal/$slug`): title, intro and sections, a shop link, a "what moment do you
-  return to?" form (local state only) and "keep reading" posts.
-- **Contact** (`/contact`): a name, email and message form that shows a thank-you on submit.
-  Nothing is sent.
+  return to?" form (`POST /journal/stories` with the post's slug) and "keep reading" posts.
+- **Contact** (`/contact`): name, email, subject and message (`POST /contact`), then a
+  thank-you.
 
 ## Errors
 
 - Unknown URL: the root 404 ("this page has drifted away", "return home").
-- Unknown collection, product or journal post: that route's own not-found message.
+- Unknown collection, product or journal post (404 from the API): that route's own not-found
+  message.
+- The backend is unreachable while loading a page: the root error screen, except on the
+  homepage, where only the bestsellers section is left out.
 - Render error: the root error boundary ("this page didn't load", "try again" / "return home").
 - Server-side failure: the branded HTML 500 page from `lib/error-page.ts`.

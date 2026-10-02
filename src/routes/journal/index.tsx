@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { journalPosts } from "@/lib/auriva-journal";
+import { errorMessage, getJournalPosts, shareRitualStory } from "@/lib/api";
 
 export const Route = createFileRoute("/journal/")({
   head: () => ({
@@ -25,11 +25,13 @@ export const Route = createFileRoute("/journal/")({
     ],
     links: [{ rel: "canonical", href: "https://auriva-essence-studio.lovable.app/journal" }],
   }),
+  loader: async () => ({ journalPosts: await getJournalPosts() }),
   component: JournalIndex,
 });
 
 function JournalIndex() {
-  const [shared, setShared] = useState(false);
+  const { journalPosts } = Route.useLoaderData();
+  const share = useMutation({ mutationFn: shareRitualStory });
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,7 +82,7 @@ function JournalIndex() {
                 tell us about the moment you return to.
               </h2>
             </div>
-            {shared ? (
+            {share.isSuccess ? (
               <div className="flex items-center border-l border-taupe pl-8 text-[22px] lowercase">
                 thank you. your ritual is now part of ours.
               </div>
@@ -89,19 +91,41 @@ function JournalIndex() {
                 className="space-y-8"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  setShared(true);
+                  const form = new FormData(event.currentTarget);
+                  share.mutate({
+                    name: String(form.get("name") ?? "").trim(),
+                    story: String(form.get("story") ?? "").trim(),
+                  });
                 }}
               >
                 <label className="block">
                   <span className="label-track text-muted-foreground">name</span>
-                  <input required name="name" className="mt-3 w-full border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none focus:border-foreground" />
+                  <input
+                    required
+                    name="name"
+                    className="mt-3 w-full border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none focus:border-foreground"
+                  />
                 </label>
                 <label className="block">
                   <span className="label-track text-muted-foreground">your ritual or story</span>
-                  <textarea required name="story" rows={4} className="mt-3 w-full resize-none border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none focus:border-foreground" />
+                  <textarea
+                    required
+                    name="story"
+                    rows={4}
+                    className="mt-3 w-full resize-none border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none focus:border-foreground"
+                  />
                 </label>
-                <button type="submit" className="label-track border border-foreground/40 px-9 py-4 transition-colors duration-700 hover:bg-foreground hover:text-background">
-                  share your ritual
+                {share.error ? (
+                  <p role="alert" className="text-[15px] text-destructive">
+                    {errorMessage(share.error)}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={share.isPending}
+                  className="label-track border border-foreground/40 px-9 py-4 transition-colors duration-700 hover:bg-foreground hover:text-background disabled:opacity-50"
+                >
+                  {share.isPending ? "sharing…" : "share your ritual"}
                 </button>
               </form>
             )}

@@ -214,25 +214,16 @@ DESIGN PRINCIPLES
 — Mobile: All sections stack gracefully. Hero remains full viewport. Grid becomes single column.
 — The brand tagline "from petal to presence" should appear subtly in footer and breaker sections.
 
-This project was built with [Lovable](https://lovable.dev).
-
-**Live app**: https://auriva-essence-studio.lovable.app
-
-## Build with Lovable
-
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/ee6792bb-c99e-43cc-8d3c-c4795e44a749).
-
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
-
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Developed with [Claude Code](https://claude.com/claude-code). Project guide and docs: [`CLAUDE.md`](CLAUDE.md) and [`docs/`](docs/).
+
+Requires Node.js 20+ and npm (`package-lock.json` is the lockfile).
 
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
+npm ci          # install exactly what the lockfile pins
+npm run dev     # http://localhost:8080
+npm run build   # production build (Cloudflare target)
 ```
+
+Copy `.env.example` to `.env.local` to point the site at the backend (`VITE_API_URL`) or enable Google sign-in (`VITE_GOOGLE_CLIENT_ID`).

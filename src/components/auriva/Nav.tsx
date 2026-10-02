@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { BagIcon } from "./marks";
-import { useAccount, useBag } from "@/lib/auriva-store";
+import { useCart, useUser } from "@/lib/api/hooks";
 
 const menu: {
   label: string;
@@ -37,8 +37,8 @@ export function Nav({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const { count } = useBag();
-  const account = useAccount();
+  const { count } = useCart();
+  const { user: account } = useUser();
 
 
 

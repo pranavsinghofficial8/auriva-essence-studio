@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { removeFromBag, setQty, useAccount, useBag } from "@/lib/auriva-store";
+import { errorMessage } from "@/lib/api";
+import { useCart, useCartActions, useUser } from "@/lib/api/hooks";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -22,8 +23,12 @@ export const Route = createFileRoute("/cart")({
 });
 
 function CartPage() {
-  const { items, subtotal } = useBag();
-  const account = useAccount();
+  const { user: account, isLoading: userLoading } = useUser();
+  const { lines: items, subtotal, isLoading: cartLoading } = useCart();
+  const { update, remove } = useCartActions();
+  const loading = userLoading || cartLoading;
+  const saving = update.isPending || remove.isPending;
+  const saveError = update.error ?? remove.error;
 
   return (
     <div className="min-h-screen bg-background">
@@ -32,15 +37,28 @@ function CartPage() {
       <main className="mx-auto w-full max-w-[1400px] px-6 pt-36 pb-28 sm:px-10 sm:pt-44">
         <p className="label-track text-muted-foreground">your bag</p>
         <h1 className="mt-6 text-[38px] leading-[1.05] lowercase sm:text-[60px]">
-          {items.length ? "a few quiet hours" : "your bag is empty"}
+          {loading ? "your bag" : items.length ? "a few quiet hours" : "your bag is empty"}
         </h1>
 
-        {items.length === 0 ? (
+        {loading ? (
+          <p className="mt-10 text-muted-foreground" aria-live="polite">
+            Opening your bag…
+          </p>
+        ) : items.length === 0 ? (
           <div className="mt-10">
             <p className="max-w-md text-muted-foreground">
-              Nothing here yet. Begin with a fragrance that matches the feeling you want the room
-              to hold.
+              {account
+                ? "Nothing here yet. Begin with a fragrance that matches the feeling you want the room to hold."
+                : "Sign in to see your bag, or begin with a fragrance that matches the feeling you want the room to hold."}
             </p>
+            {!account ? (
+              <Link
+                to="/auth"
+                className="label-track mt-10 mr-10 inline-block border-b border-foreground/40 pb-1 transition-opacity duration-500 hover:opacity-60"
+              >
+                sign in →
+              </Link>
+            ) : null}
             <Link
               to="/shop"
               className="label-track mt-10 inline-block border-b border-foreground/40 pb-1 transition-opacity duration-500 hover:opacity-60"
@@ -50,7 +68,12 @@ function CartPage() {
           </div>
         ) : (
           <div className="mt-16 grid gap-20 lg:grid-cols-[1fr_380px]">
-            <ul>
+            <ul aria-busy={saving}>
+              {saveError ? (
+                <li role="alert" className="pb-6 text-[15px] text-destructive">
+                  {errorMessage(saveError)}
+                </li>
+              ) : null}
               {items.map(({ product, qty }) => (
                 <li
                   key={product.slug}
@@ -80,8 +103,9 @@ function CartPage() {
                         <button
                           type="button"
                           aria-label={`Decrease ${product.name}`}
-                          onClick={() => setQty(product.slug, qty - 1)}
-                          className="px-4 py-2 transition-opacity duration-300 hover:opacity-50"
+                          onClick={() => update.mutate({ slug: product.slug, qty: qty - 1 })}
+                          disabled={saving}
+                          className="px-4 py-2 transition-opacity duration-300 hover:opacity-50 disabled:opacity-30"
                         >
                           −
                         </button>
@@ -89,16 +113,18 @@ function CartPage() {
                         <button
                           type="button"
                           aria-label={`Increase ${product.name}`}
-                          onClick={() => setQty(product.slug, qty + 1)}
-                          className="px-4 py-2 transition-opacity duration-300 hover:opacity-50"
+                          onClick={() => update.mutate({ slug: product.slug, qty: qty + 1 })}
+                          disabled={saving}
+                          className="px-4 py-2 transition-opacity duration-300 hover:opacity-50 disabled:opacity-30"
                         >
                           +
                         </button>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeFromBag(product.slug)}
-                        className="label-track text-muted-foreground transition-colors duration-500 hover:text-foreground"
+                        onClick={() => remove.mutate(product.slug)}
+                        disabled={saving}
+                        className="label-track text-muted-foreground transition-colors duration-500 hover:text-foreground disabled:opacity-40"
                       >
                         remove
                       </button>

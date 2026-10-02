@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { getJournalPost, journalPosts, type JournalPost } from "@/lib/auriva-journal";
+import { errorMessage, getJournalPostPage, shareRitualStory } from "@/lib/api";
 
 export const Route = createFileRoute("/journal/$slug")({
-  loader: ({ params }) => {
-    const post = getJournalPost(params.slug);
-    if (!post) throw notFound();
-    return { post };
+  loader: async ({ params }) => {
+    const page = await getJournalPostPage(params.slug);
+    if (!page) throw notFound();
+    return page;
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -47,7 +47,7 @@ export const Route = createFileRoute("/journal/$slug")({
   component: JournalArticle,
   errorComponent: ({ error }) => (
     <div className="flex min-h-screen items-center justify-center px-6" role="alert">
-      {error.message}
+      {errorMessage(error)}
     </div>
   ),
   notFoundComponent: () => (
@@ -61,9 +61,8 @@ export const Route = createFileRoute("/journal/$slug")({
 });
 
 function JournalArticle() {
-  const { post } = Route.useLoaderData() as { post: JournalPost };
-  const others = journalPosts.filter((p) => p.slug !== post.slug).slice(0, 3);
-  const [shared, setShared] = useState(false);
+  const { post, more: others } = Route.useLoaderData();
+  const share = useMutation({ mutationFn: shareRitualStory });
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,13 +112,48 @@ function JournalArticle() {
           <section className="mt-20 bg-stone p-8 sm:p-12">
             <p className="label-track text-muted-foreground">your ritual</p>
             <h2 className="mt-5 text-[28px] lowercase">what moment do you return to?</h2>
-            {shared ? (
+            {share.isSuccess ? (
               <p className="mt-8 text-[18px] lowercase">thank you for sharing it with us.</p>
             ) : (
-              <form onSubmit={(event) => { event.preventDefault(); setShared(true); }} className="mt-8 space-y-6">
-                <input required name="name" aria-label="Name" placeholder="name" className="w-full border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none placeholder:text-muted-foreground focus:border-foreground" />
-                <textarea required name="story" aria-label="Your ritual or story" placeholder="your ritual or story" rows={3} className="w-full resize-none border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none placeholder:text-muted-foreground focus:border-foreground" />
-                <button type="submit" className="label-track border border-foreground/40 px-8 py-4 transition-colors duration-700 hover:bg-foreground hover:text-background">share your ritual</button>
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const form = new FormData(event.currentTarget);
+                  share.mutate({
+                    name: String(form.get("name") ?? "").trim(),
+                    story: String(form.get("story") ?? "").trim(),
+                    postSlug: post.slug,
+                  });
+                }}
+                className="mt-8 space-y-6"
+              >
+                <input
+                  required
+                  name="name"
+                  aria-label="Name"
+                  placeholder="name"
+                  className="w-full border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none placeholder:text-muted-foreground focus:border-foreground"
+                />
+                <textarea
+                  required
+                  name="story"
+                  aria-label="Your ritual or story"
+                  placeholder="your ritual or story"
+                  rows={3}
+                  className="w-full resize-none border-0 border-b border-taupe bg-transparent px-0 py-3 outline-none placeholder:text-muted-foreground focus:border-foreground"
+                />
+                {share.error ? (
+                  <p role="alert" className="text-[15px] text-destructive">
+                    {errorMessage(share.error)}
+                  </p>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={share.isPending}
+                  className="label-track border border-foreground/40 px-8 py-4 transition-colors duration-700 hover:bg-foreground hover:text-background disabled:opacity-50"
+                >
+                  {share.isPending ? "sharing…" : "share your ritual"}
+                </button>
               </form>
             )}
           </section>

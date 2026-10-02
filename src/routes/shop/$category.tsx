@@ -2,17 +2,21 @@ import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
 import { AuraMedallion } from "@/components/auriva/aura-marks";
-import type { Category, Product } from "@/lib/auriva-catalog";
-import { categories, getCategory, productsIn, promises } from "@/lib/auriva-catalog";
+import { promises } from "@/lib/auriva-catalog";
+import { errorMessage, getCategories, getCategoryPage } from "@/lib/api";
 import { preloadImage } from "@/lib/preload-image";
 
 export const Route = createFileRoute("/shop/$category")({
-  loader: async ({ params }): Promise<{ category: Category; items: Product[] }> => {
-    const category = getCategory(params.category);
-    if (!category) throw notFound();
+  loader: async ({ params }) => {
+    const [page, categories] = await Promise.all([
+      getCategoryPage(params.category),
+      getCategories(),
+    ]);
+    if (!page) throw notFound();
+    const { category, products: items } = page;
     // The banner fills the first screen; have it ready before the page crossfades in.
     await preloadImage(category.banner);
-    return { category, items: productsIn(category.slug) };
+    return { category, items, categories };
   },
   head: ({ loaderData }) => {
     const c = loaderData?.category;
@@ -39,17 +43,14 @@ export const Route = createFileRoute("/shop/$category")({
   ),
   errorComponent: ({ error }) => (
     <div role="alert" className="flex min-h-screen items-center justify-center px-6 text-center">
-      <p className="text-muted-foreground">{error.message}</p>
+      <p className="text-muted-foreground">{errorMessage(error)}</p>
     </div>
   ),
   component: CategoryPage,
 });
 
 function CategoryPage() {
-  const { category, items } = Route.useLoaderData() as {
-    category: Category;
-    items: Product[];
-  };
+  const { category, items, categories } = Route.useLoaderData();
 
   return (
     <div className="bg-background">

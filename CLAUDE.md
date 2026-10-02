@@ -1,16 +1,20 @@
 # CLAUDE.md
 
-Project documentation lives in [`docs/`](docs/). The full guide is imported below so it loads
-automatically:
+Project documentation lives in [`docs/`](docs/). The full guide and the current status (open
+decisions, inputs awaited, next steps) are imported below so they load automatically:
 
 @docs/CLAUDE.md
+
+@docs/status.md
 
 Deeper references (read when relevant):
 
 - [`docs/architecture.md`](docs/architecture.md): stack, rendering, routing, build and error handling
 - [`docs/user-flows.md`](docs/user-flows.md): every page and user journey, step by step
 - [`docs/design-system.md`](docs/design-system.md): tokens, typography voice, components, motion
+- [`docs/backend-handoff.md`](docs/backend-handoff.md): the API contract for the backend (endpoints, shapes, errors, auth)
+- [`docs/google-sign-in.md`](docs/google-sign-in.md): how "Continue with Google" works and how to set it up
 - [`docs/changelog.md`](docs/changelog.md): what changed and why, newest first
 
-`AGENTS.md` (Lovable's sync rules) and `README.md` (the original design brief) stay at the repo
-root because Lovable and GitHub expect them there.
+`README.md` (the original design brief and how to run the project) stays at the repo root for
+GitHub.

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
+import { errorMessage, sendContactMessage } from "@/lib/api";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -26,7 +27,8 @@ export const Route = createFileRoute("/contact")({
 });
 
 function ContactPage() {
-  const [sent, setSent] = useState(false);
+  const send = useMutation({ mutationFn: sendContactMessage });
+  const sent = send.isSuccess;
 
   return (
     <div className="min-h-screen bg-background">
@@ -39,8 +41,8 @@ function ContactPage() {
             write to the maison
           </h1>
           <p className="mt-8 max-w-xl text-muted-foreground">
-            A fragrance question, an order, a stockist enquiry or a collaboration — leave a note
-            and someone from the studio will reply within two working days.
+            A fragrance question, an order, a stockist enquiry or a collaboration — leave a note and
+            someone from the studio will reply within two working days.
           </p>
         </section>
 
@@ -73,7 +75,14 @@ function ContactPage() {
                 className="space-y-8"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  setSent(true);
+                  const form = new FormData(e.currentTarget);
+                  const field = (key: string) => String(form.get(key) ?? "").trim();
+                  send.mutate({
+                    name: field("name"),
+                    email: field("email"),
+                    subject: field("subject"),
+                    message: field("message"),
+                  });
                 }}
               >
                 {[
@@ -106,11 +115,17 @@ function ContactPage() {
                     className="mt-3 w-full resize-none border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground"
                   />
                 </div>
+                {send.error ? (
+                  <p role="alert" className="text-[15px] text-destructive">
+                    {errorMessage(send.error)}
+                  </p>
+                ) : null}
                 <button
                   type="submit"
-                  className="label-track bg-foreground px-12 py-5 text-background transition-opacity duration-500 hover:opacity-85"
+                  disabled={send.isPending}
+                  className="label-track bg-foreground px-12 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
                 >
-                  send note
+                  {send.isPending ? "sending…" : "send note"}
                 </button>
               </form>
             )}
