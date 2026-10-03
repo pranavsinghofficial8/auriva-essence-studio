@@ -464,6 +464,11 @@
   filter: none;
 }
 
+/* Reset instantly (it's off screen by then), so a repeat visit starts from the beginning. */
+.reveal-words[data-shown="false"] .reveal-word {
+  transition: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal-word {
     opacity: 1;

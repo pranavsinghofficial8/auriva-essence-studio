@@ -2,6 +2,13 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: homepage quote replays
+
+- The homepage quote ("at auriva, we renew flowers into incense…") now unfurls every time the
+  visitor scrolls to it, not just the first time. It resets, out of sight, once scrolled fully
+  away. `useReveal` gained a `repeat` option; `RevealWords` uses it by default. The fade-ins
+  elsewhere (`Reveal`) still play once.
+
 ## 2026-10-03: Razorpay payments
 
 - Checkout now takes payment with Razorpay's own window (UPI, cards, net banking, wallets).

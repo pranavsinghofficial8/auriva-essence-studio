@@ -37,17 +37,17 @@ the About page's chapter bar.
 
 ## Components (`src/components/auriva/`)
 
-| Component                      | Purpose                                                                                                                      |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `Nav`                          | fixed top bar; transparent over heroes, solid after `threshold`; menu panel; `hidden` slides it away                         |
-| `Footer`                       | links and tagline on espresso                                                                                                |
-| `Logo`                         | the PNG wordmark (`light` variant for dark backgrounds) with the optional tagline                                            |
-| `Reveal` / `useReveal`         | fade and rise when scrolled into view                                                                                        |
-| `RevealWords`                  | text that unfurls word by word (rise, un-blur, fade) when scrolled into view                                                 |
-| `HeroSmoke`                    | WebGL smoke rising from the homepage hero photo                                                                              |
-| `AuraGlyph`                    | the thin-line symbol for each aura (`strokeWidth` adjustable)                                                                |
-| `AuraMedallion`                | a glyph in a circle; inside a `group` it fills and ripples on hover; `tone="light"` ripples continuously on dark backgrounds |
-| `marks.tsx`, `story-marks.tsx` | brand and About-page line icons                                                                                              |
+| Component                      | Purpose                                                                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Nav`                          | fixed top bar; transparent over heroes, solid after `threshold`; menu panel; `hidden` slides it away                               |
+| `Footer`                       | links and tagline on espresso                                                                                                      |
+| `Logo`                         | the PNG wordmark (`light` variant for dark backgrounds) with the optional tagline                                                  |
+| `Reveal` / `useReveal`         | fade and rise when scrolled into view                                                                                              |
+| `RevealWords`                  | text that unfurls word by word (rise, un-blur, fade) when scrolled into view; replays on every visit (`repeat={false}` plays once) |
+| `HeroSmoke`                    | WebGL smoke rising from the homepage hero photo                                                                                    |
+| `AuraGlyph`                    | the thin-line symbol for each aura (`strokeWidth` adjustable)                                                                      |
+| `AuraMedallion`                | a glyph in a circle; inside a `group` it fills and ripples on hover; `tone="light"` ripples continuously on dark backgrounds       |
+| `marks.tsx`, `story-marks.tsx` | brand and About-page line icons                                                                                                    |
 
 Don't use the bare `AuraGlyph` in `text-taupe` on light backgrounds; it's too faint to read.
 Use the medallion or a dark stroke.

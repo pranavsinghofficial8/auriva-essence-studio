@@ -99,7 +99,8 @@ in this folder for detail.
   reduced motion; the shader also pauses when scrolled away. It only fits `hero-lotus.jpg`, so
   retrace `SOURCE` if the hero photo changes.
 - **`Reveal` / `useReveal`**: IntersectionObserver fade-in, driven by the `reveal` utility and a
-  `data-shown` attribute.
+  `data-shown` attribute. Plays once; `useReveal({ repeat: true })` replays on every visit, as
+  `RevealWords` (the homepage quote) does by default.
 - **Marks**: `marks.tsx` (Aura/Petal/Smoke/Sigil/Bag), `aura-marks.tsx` (`AuraGlyph` per
   `AuraName`, and `AuraMedallion`: the glyph in a thin circle that fills and ripples on hover
   inside a `group`; `tone="light"` for dark backgrounds), `story-marks.tsx` (About page icons).

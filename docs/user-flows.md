@@ -24,7 +24,7 @@ that, each step below calls the endpoint listed in `backend-handoff.md`.
    and "enter the ritual", which scrolls smoothly to the collection.
 2. **Story grid**: photo tiles and three text tiles. "our philosophy" → `/about#france`, "our
    craft" → `/about#aura`, "our story" → `/about#awaken`.
-3. **Quote**: "at auriva, we renew flowers into incense…" unfurls word by word (`RevealWords`).
+3. **Quote**: "at auriva, we renew flowers into incense…" unfurls word by word (`RevealWords`), again each time the visitor scrolls back to it.
 4. **Collection**: three category cards → `/shop/$category`; "explore all collections" → `/shop`.
 5. **Feature bar**: three brand promises.
 6. **Bestsellers**: three equal-height product cards with prices aligned and "shop now" →
