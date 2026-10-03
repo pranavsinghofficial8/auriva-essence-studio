@@ -18,6 +18,8 @@ import type {
   JournalPost,
   JournalPostPage,
   Order,
+  PaymentResult,
+  PlacedOrder,
   Product,
   ProductPage,
   RitualStory,
@@ -112,11 +114,23 @@ export const removeCartItem = (slug: string): Promise<Cart> =>
 
 /* ---------------------------------- orders ---------------------------------- */
 
-/** POST /orders: turns the signed-in visitor's bag into an order and empties the bag. */
-export const placeOrder = (input: { address: Address }): Promise<Order> =>
+/**
+ * POST /orders: turns the signed-in visitor's bag into an order awaiting payment, and returns the
+ * Razorpay session to pay it with. The bag is kept until the payment is confirmed.
+ */
+export const placeOrder = (input: { address: Address }): Promise<PlacedOrder> =>
   usingMockApi ? mock.placeOrder(input) : request("/orders", { method: "POST", body: input });
 
-/** GET /orders: the signed-in visitor's orders, newest first. */
+/**
+ * POST /orders/:id/payment: hands Razorpay's result to the backend, which verifies its signature,
+ * marks the order paid and empties the bag. Resolves with the paid order.
+ */
+export const confirmPayment = (orderId: string, result: PaymentResult): Promise<Order> =>
+  usingMockApi
+    ? mock.confirmPayment(orderId, result)
+    : request(`/orders/${enc(orderId)}/payment`, { method: "POST", body: result });
+
+/** GET /orders: the signed-in visitor's orders, newest first (unpaid ones left out). */
 export const getOrders = (): Promise<Order[]> =>
   usingMockApi ? mock.getOrders() : request("/orders");
 

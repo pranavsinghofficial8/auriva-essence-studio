@@ -50,8 +50,7 @@ for customers, not developers.
 
 - **Same site is simplest.** Serve the API from a subdomain of the storefront's domain (e.g.
   `api.auriva.in` alongside `auriva.in`) so the session cookie is first-party.
-- **CORS:** allow the storefront origins (production, the Lovable preview URL and
-  `http://localhost:8080`) with `Access-Control-Allow-Credentials: true`, methods
+- **CORS:** allow the storefront origins (production and `http://localhost:8080`) with `Access-Control-Allow-Credentials: true`, methods
   `GET, POST, PATCH, DELETE`, and header `Content-Type`. Answer the `OPTIONS` preflight. Never use
   a wildcard origin with credentials.
 - **Session cookie:** `HttpOnly; Secure; SameSite=Lax` (or `None` if the API sits on a different
@@ -192,7 +191,9 @@ The frontend validates before sending; please validate again on the server:
 }
 ```
 
-- `status` is one of `placed`, `paid`, `packed`, `shipped`, `delivered` and `cancelled`.
+- `status` is one of `pending_payment`, `placed`, `paid`, `packed`, `shipped`, `delivered` and
+  `cancelled`. Orders start as `pending_payment` and become `paid` once the payment is verified
+  (`placed` is only used by the mock when no payment is taken).
 - `lines[].price` is the unit price at the time of the order.
 
 ## Endpoints
@@ -257,14 +258,76 @@ Cap quantities if you need to (e.g. 1–20) and return 422 with a message when e
 
 ### Orders (signed in; 401 otherwise)
 
-| Method | Path          | Body                   | Returns                                                                                                                                                                          |
-| ------ | ------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/orders`     | `{ address: Address }` | The new `Order` (201). Build it from the visitor's current bag at current prices, then empty the bag. 409 `cart_empty` if the bag is empty; 422 with `fields` for a bad address. |
-| GET    | `/orders`     | none                   | `Order[]`, newest first (the account page shows the first)                                                                                                                       |
-| GET    | `/orders/:id` | none                   | `Order`; 404 if it doesn't exist or belongs to someone else                                                                                                                      |
+| Method | Path                  | Body                   | Returns                                                                                                                                                                                     |
+| ------ | --------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/orders`             | `{ address: Address }` | `{ order, payment }` (201): the new `Order` as `pending_payment` and its `PaymentSession`. See "Payments" below. 409 `cart_empty` if the bag is empty; 422 with `fields` for a bad address. |
+| POST   | `/orders/:id/payment` | `PaymentResult`        | The paid `Order`, after verifying the payment. See "Payments" below.                                                                                                                        |
+| GET    | `/orders`             | none                   | `Order[]`, newest first, **leaving out** `pending_payment` orders (the account page shows the first)                                                                                        |
+| GET    | `/orders/:id`         | none                   | `Order`; 404 if it doesn't exist or belongs to someone else                                                                                                                                 |
 
-After `POST /orders` the frontend navigates to `/order-confirmation?id=<id>` and loads the
-order with `GET /orders/:id`.
+After the payment is confirmed the frontend navigates to `/order-confirmation?id=<id>` and loads
+the order with `GET /orders/:id`.
+
+### Payments (Razorpay)
+
+The frontend uses Razorpay Standard Checkout (`src/lib/razorpay.ts`; the owner's guide is
+`docs/payments.md`). The backend holds `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and
+`RAZORPAY_WEBHOOK_SECRET`; the secret never goes to the browser.
+
+**`POST /orders`** returns:
+
+```json
+{
+  "order": { "…": "an Order with status pending_payment" },
+  "payment": {
+    "provider": "razorpay",
+    "keyId": "rzp_test_…",
+    "razorpayOrderId": "order_Nx7…",
+    "amount": 56500,
+    "currency": "INR"
+  }
+}
+```
+
+- Price the bag on the server, save the order as `pending_payment`, then create a Razorpay order
+  with the [Orders API](https://razorpay.com/docs/api/orders/) (`amount` = total × 100 in
+  paise, `currency: "INR"`, `receipt` = the order id, `notes.auriva_order_id` = the order id).
+  Store the Razorpay order id on the order.
+- **Don't empty the bag yet.** It's emptied when the order is paid.
+- Keep one unpaid order per visitor: when they check out again, cancel (or reuse, if the lines
+  and address match) their previous `pending_payment` order. Expire unpaid orders after a day
+  or so (status `cancelled`).
+- `payment` may be `null` only if nothing is due; the frontend then treats the order as done.
+
+**`POST /orders/:id/payment`** body (`PaymentResult`):
+
+```json
+{
+  "razorpayPaymentId": "pay_Nx8…",
+  "razorpayOrderId": "order_Nx7…",
+  "razorpaySignature": "9ef4dffb…"
+}
+```
+
+- The order must be the visitor's (404 otherwise), and `razorpayOrderId` must be the one stored
+  on it.
+- Verify the signature: HMAC-SHA256 of `razorpayOrderId + "|" + razorpayPaymentId` with the key
+  secret, hex-encoded, must equal `razorpaySignature` (compare in constant time; Razorpay's SDKs
+  have `validatePaymentVerification`). Optionally fetch the payment to confirm it's `captured`
+  for the right amount.
+- On success: mark the order `paid`, store the payment id, empty the visitor's bag, return the
+  `Order`. Be idempotent: an order that's already paid just returns it.
+- On failure: 400 with `code: "payment_unverified"` and a customer-facing `message`.
+
+**Webhook `POST /webhooks/razorpay`** (public, no session): verify the `X-Razorpay-Signature`
+header (HMAC-SHA256 of the raw request body with the webhook secret). On `payment.captured` or
+`order.paid`, find the order by the Razorpay order id and mark it paid exactly as above
+(idempotent). This catches visitors who paid but closed the tab before the frontend confirmed.
+
+**Frontend behaviour on errors:** a 4xx from `/orders/:id/payment` shows its `message`; a
+network error or 5xx tells the visitor their payment was received, not to pay again, and that
+they'll get an email once it's confirmed. So the webhook (and an order-confirmation email) must
+be in place before launch.
 
 ### Forms (public)
 
@@ -278,12 +341,9 @@ any 4xx `message`.
 
 ## Decisions to settle together
 
-1. **Payments:** Razorpay or Stripe? The likely flow is: `POST /orders` returns the order plus
-   a payment session (e.g. a Razorpay `order_id` and key). The frontend opens the checkout
-   widget, and your webhook marks the order `paid`. Once you choose, we'll add a
-   `payment` object to the `POST /orders` response and a pay step in the UI. Until then, orders
-   are created as `placed` with no payment. Checkout hides the "demonstration checkout" note as
-   soon as `VITE_API_URL` is set.
+1. **Payments:** decided: **Razorpay** (2026-10-03). The frontend's pay step is built; the
+   backend's part is under "Payments (Razorpay)" above. Still open: refunds (Dashboard only for
+   now) and whether to offer cash on delivery.
 2. **Guest checkout:** the UI currently requires sign-in to add to the bag. Allowing guests
    would need an anonymous bag (cookie) and an email on the order.
 3. **Shipping and tax:** the UI shows shipping as "Complimentary" and the prices as inclusive
@@ -301,7 +361,9 @@ any 4xx `message`.
 - [ ] `VITE_API_URL` set in the storefront's build environment (and `VITE_GOOGLE_CLIENT_ID`)
 - [ ] Catalog seeded from the code files; image URLs point at your storage or CDN
 - [ ] Google ID tokens verified server-side; passwords hashed; login rate-limited
-- [ ] Payment provider integrated (see the decisions above)
+- [ ] Razorpay: live keys on the backend, `POST /orders` creates Razorpay orders,
+      `POST /orders/:id/payment` verifies signatures, webhook set up in Live mode, automatic
+      capture on
 - [ ] Then, in the frontend: delete `src/lib/api/mock.ts` and the `usingMockApi` branches in
       `src/lib/api/index.ts`, and remove `auriva-catalog.ts` / `auriva-journal.ts` data (keep
       the types) once the backend serves them

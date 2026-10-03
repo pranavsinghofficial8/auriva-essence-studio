@@ -4,8 +4,9 @@ import { z } from "zod";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { ApiError, errorMessage, usingMockApi, type Address } from "@/lib/api";
-import { useCart, usePlaceOrder, useUser } from "@/lib/api/hooks";
+import { ApiError, errorMessage, usingMockApi, type Address, type Order } from "@/lib/api";
+import { useCart, useConfirmPayment, usePlaceOrder, useUser } from "@/lib/api/hooks";
+import { PaymentNotCompleted, payWithRazorpay, razorpayKeyId } from "@/lib/razorpay";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -82,6 +83,17 @@ const addressSchema = z.object({
 
 type AddressField = keyof z.input<typeof addressSchema>;
 
+/** The real backend always takes payment; the mock does once it has a Razorpay test key. */
+const takesPayment = !usingMockApi || !!razorpayKeyId;
+
+/** Shown when Razorpay took the money but we couldn't confirm it with the backend. */
+function confirmErrorMessage(error: unknown) {
+  if (error instanceof ApiError && error.status !== 0 && error.status < 500) {
+    return errorMessage(error);
+  }
+  return "We received your payment but couldn't confirm it just yet. Please don't pay again; your order will update by itself, and we'll email you once it's confirmed.";
+}
+
 const inputClass =
   "mt-3 w-full border-b border-border bg-transparent pb-3 text-[17px] outline-none transition-colors duration-500 focus:border-foreground aria-[invalid=true]:border-destructive";
 
@@ -90,12 +102,64 @@ function CheckoutPage() {
   const { user: account, isLoading: userLoading } = useUser();
   const { lines: items, subtotal, isLoading: cartLoading } = useCart();
   const placeOrder = usePlaceOrder();
+  const confirmPayment = useConfirmPayment();
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<AddressField, string>>>({});
+  const [paying, setPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const loading = userLoading || cartLoading;
+  const busy = placeOrder.isPending || paying || confirmPayment.isPending;
   // Field messages from the server (422) take effect alongside our own.
   const serverFields = placeOrder.error instanceof ApiError ? (placeOrder.error.fields ?? {}) : {};
   const errorFor = (field: AddressField) => fieldErrors[field] ?? serverFields[field];
+  const formError = paymentError
+    ? paymentError
+    : confirmPayment.error
+      ? confirmErrorMessage(confirmPayment.error)
+      : placeOrder.error && !Object.keys(serverFields).length
+        ? errorMessage(placeOrder.error)
+        : null;
+
+  const done = (order: Order) => navigate({ to: "/order-confirmation", search: { id: order.id } });
+
+  /** Create the order, take payment in Razorpay's window, then have the backend confirm it. */
+  const checkout = async (address: Address) => {
+    if (!account) return;
+    setPaymentError(null);
+    placeOrder.reset();
+    confirmPayment.reset();
+
+    let placed;
+    try {
+      placed = await placeOrder.mutateAsync({ address });
+    } catch {
+      return; // shown from placeOrder.error
+    }
+    const { order, payment } = placed;
+    if (!payment) return done(order);
+
+    setPaying(true);
+    let result;
+    try {
+      result = await payWithRazorpay(payment, {
+        orderId: order.id,
+        name: address.fullName,
+        email: account.email,
+        phone: address.phone,
+      });
+    } catch (error) {
+      setPaymentError(error instanceof PaymentNotCompleted ? error.message : errorMessage(error));
+      return;
+    } finally {
+      setPaying(false);
+    }
+
+    try {
+      done(await confirmPayment.mutateAsync({ orderId: order.id, result }));
+    } catch {
+      /* shown from confirmPayment.error */
+    }
+  };
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -119,10 +183,7 @@ function CheckoutPage() {
     setFieldErrors({});
     const { line2, ...rest } = parsed.data;
     const address: Address = { ...rest, ...(line2 ? { line2 } : {}) };
-    placeOrder.mutate(
-      { address },
-      { onSuccess: (order) => navigate({ to: "/order-confirmation", search: { id: order.id } }) },
-    );
+    void checkout(address);
   };
 
   const field = (
@@ -238,28 +299,50 @@ function CheckoutPage() {
                 </div>
               </fieldset>
 
-              {usingMockApi ? (
-                <div className="bg-secondary p-8">
-                  <p className="label-track text-muted-foreground">payment</p>
+              <div className="bg-secondary p-8">
+                <p className="label-track text-muted-foreground">payment</p>
+                {takesPayment ? (
+                  <>
+                    <p className="mt-4 text-[16px] leading-[1.9]">
+                      Pay securely with Razorpay: UPI, cards, net banking or wallets. Your bag is
+                      kept until the payment goes through.
+                    </p>
+                    {usingMockApi ? (
+                      <p className="mt-3 text-[14px] leading-[1.8] text-muted-foreground">
+                        Razorpay test mode: no real money moves. Netbanking lets you pick success or
+                        failure.
+                      </p>
+                    ) : null}
+                  </>
+                ) : (
                   <p className="mt-4 text-[16px] leading-[1.9]">
                     This is a demonstration checkout. No payment is taken — placing the order
                     records it in this browser until the backend is connected.
                   </p>
-                </div>
-              ) : null}
+                )}
+              </div>
 
-              {placeOrder.error && !Object.keys(serverFields).length ? (
-                <p role="alert" className="text-[15px] text-destructive">
-                  {errorMessage(placeOrder.error)}
+              {formError ? (
+                <p role="alert" className="text-[15px] leading-[1.8] text-destructive">
+                  {formError}
                 </p>
               ) : null}
 
               <button
                 type="submit"
-                disabled={placeOrder.isPending}
+                disabled={busy}
+                aria-busy={busy}
                 className="label-track w-full bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
               >
-                {placeOrder.isPending ? "placing your order…" : "place order"}
+                {placeOrder.isPending
+                  ? "placing your order…"
+                  : paying
+                    ? "waiting for payment…"
+                    : confirmPayment.isPending
+                      ? "confirming payment…"
+                      : takesPayment
+                        ? `pay ₹${subtotal}`
+                        : "place order"}
               </button>
             </form>
 

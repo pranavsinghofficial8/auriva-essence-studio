@@ -10,6 +10,7 @@
 import { categories, getCategory, getProduct, products, productsIn } from "@/lib/auriva-catalog";
 import { getJournalPost, journalPosts } from "@/lib/auriva-journal";
 import { forgetGoogleSession, readGoogleCredential } from "@/lib/google-auth";
+import { razorpayKeyId } from "@/lib/razorpay";
 
 import { ApiError } from "./client";
 import type {
@@ -19,6 +20,8 @@ import type {
   ContactMessage,
   JournalPostPage,
   Order,
+  PaymentResult,
+  PlacedOrder,
   ProductPage,
   RitualStory,
   SignInInput,
@@ -191,7 +194,12 @@ export const removeCartItem = (slug: string) => updateCartItem(slug, 0);
 
 /* ---------------------------------- orders ---------------------------------- */
 
-export async function placeOrder({ address }: { address: Address }): Promise<Order> {
+/**
+ * With VITE_RAZORPAY_KEY_ID set, the order waits for a Razorpay test payment, like the real
+ * backend: one unpaid order per visitor (replaced on each attempt), and the bag is kept until
+ * `confirmPayment`. Without it, the order is placed straight away with nothing to pay.
+ */
+export async function placeOrder({ address }: { address: Address }): Promise<PlacedOrder> {
   const user = read<User>(USER_KEY);
   if (!user) throw unauthorised();
   const cart = cartFrom(storedLines());
@@ -201,7 +209,7 @@ export async function placeOrder({ address }: { address: Address }): Promise<Ord
   const order: Order = {
     id: `AUR-${Date.now().toString().slice(-6)}`,
     placedAt: new Date().toISOString(),
-    status: "placed",
+    status: razorpayKeyId ? "pending_payment" : "placed",
     name: user.name,
     email: user.email,
     address,
@@ -213,18 +221,52 @@ export async function placeOrder({ address }: { address: Address }): Promise<Ord
     })),
     total: cart.subtotal,
   };
-  write(ORDERS_KEY, [order, ...(read<Order[]>(ORDERS_KEY) ?? [])]);
-  write(BAG_KEY, []);
+  const others = storedOrders().filter((o) => o.status !== "pending_payment");
+  write(ORDERS_KEY, [order, ...others]);
+
+  if (!razorpayKeyId) {
+    write(BAG_KEY, []);
+    return { order, payment: null };
+  }
+  return {
+    order,
+    payment: {
+      provider: "razorpay",
+      keyId: razorpayKeyId,
+      amount: order.total * 100,
+      currency: "INR",
+    },
+  };
+}
+
+export async function confirmPayment(orderId: string, result: PaymentResult): Promise<Order> {
+  if (!read<User>(USER_KEY)) throw unauthorised();
+  // The real backend checks Razorpay's signature with its secret key; the mock can't.
+  if (!result.razorpayPaymentId.startsWith("pay_")) {
+    throw new ApiError(400, "payment_unverified", "We couldn't confirm your payment.");
+  }
+  await settle(500);
+  const orders = storedOrders();
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) throw notFound("Order");
+  if (order.status === "pending_payment") {
+    order.status = "paid";
+    write(ORDERS_KEY, orders);
+    write(BAG_KEY, []);
+  }
   return order;
 }
 
+const storedOrders = () => read<Order[]>(ORDERS_KEY) ?? [];
+
 export async function getOrders(): Promise<Order[]> {
   if (!read<User>(USER_KEY)) throw unauthorised();
-  return read<Order[]>(ORDERS_KEY) ?? [];
+  return storedOrders().filter((o) => o.status !== "pending_payment");
 }
 
 export async function getOrder(id: string): Promise<Order> {
-  const order = (await getOrders()).find((o) => o.id === id);
+  if (!read<User>(USER_KEY)) throw unauthorised();
+  const order = storedOrders().find((o) => o.id === id);
   if (!order) throw notFound("Order");
   return order;
 }

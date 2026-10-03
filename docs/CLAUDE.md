@@ -4,7 +4,7 @@ Auriva is a marketing and storefront site for a premium incense and home-fragran
 ("from petal to presence"). The design brief lives in `README.md`: editorial, unhurried, luxury
 maison (Aesop, Diptyque, COS). This repo is the storefront only. The backend is being built
 separately against the contract in `backend-handoff.md`; until it's connected, an in-browser mock
-stands in. Payments aren't built yet.
+stands in. Payments use Razorpay (`payments.md`); the backend's half isn't built yet.
 
 The site was started in Lovable and is now developed only with Claude Code; the Lovable sync is no
 longer used. Keep `main` building, and don't rewrite pushed history.
@@ -65,6 +65,7 @@ src/
     api/                  the ONLY way pages get or change data (see "Data layer" below)
     preload-image.ts      preloadImage(): await in loaders so a page's first photo is ready
     google-auth.ts        loads Google's "Sign in with Google" script; decodes tokens for the mock
+    razorpay.ts           loads Razorpay Checkout and opens the payment window
     utils.ts              cn() helper (clsx + tailwind-merge)
     error-*.ts            SSR error capture and the branded 500 page
   assets/                 images imported as modules
@@ -74,13 +75,13 @@ src/
   styles.css              Tailwind v4 theme, brand tokens, custom utilities, keyframes
 pc/                       loose reference images (not imported by the app)
 docs/                     this guide, status, architecture, user flows, design system, backend
-                          contract, Google sign-in, changelog
+                          contract, Google sign-in, payments, changelog
 CLAUDE.md                 root pointer that imports this file (Claude Code loads it from root)
 README.md                 the original design brief and how to run the project
 ```
 
 Start with `status.md` (where things stand and what's next). See `architecture.md`,
-`user-flows.md`, `design-system.md`, `backend-handoff.md`, `google-sign-in.md` and `changelog.md`
+`user-flows.md`, `design-system.md`, `backend-handoff.md`, `google-sign-in.md`, `payments.md` and `changelog.md`
 in this folder for detail.
 
 ## Key components and data flow
@@ -111,7 +112,8 @@ in this folder for detail.
     cookies, `ApiError`); without it, `mock.ts` answers in the browser (catalog and journal from
     code; account, bag and orders in localStorage).
   - `hooks.ts`: TanStack Query hooks for the visitor's own state (`useUser`, `useCart`,
-    `useCartActions`, `useAuthActions`, `useOrders`, `useOrder`, `usePlaceOrder`). They share
+    `useCartActions`, `useAuthActions`, `useOrders`, `useOrder`, `usePlaceOrder`,
+    `useConfirmPayment`). They share
     the per-request `QueryClient` from `router.tsx`, so the nav, bag and checkout stay in sync.
   - Public data (catalog, journal) is fetched in route `loader`s, including during SSR. Visitor
     state loads in the browser; SSR renders the signed-out state.
@@ -191,5 +193,8 @@ in this folder for detail.
 - Env vars (public; typed in `src/vite-env.d.ts`, listed in `.env.example`; read at build time):
   - `VITE_API_URL`: the backend base URL. Unset means the in-browser mock.
   - `VITE_GOOGLE_CLIENT_ID`: enables "Continue with Google" (see `google-sign-in.md`).
+  - `VITE_RAZORPAY_KEY_ID`: a Razorpay **test** key id that lets the mock open Razorpay's
+    window in test mode (see `payments.md`). Ignored once `VITE_API_URL` is set. Never put the
+    key secret in the frontend.
 
   Use `.env.local` locally (`*.local` is gitignored).

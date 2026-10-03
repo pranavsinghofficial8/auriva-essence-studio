@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import * as api from "./index";
-import type { Cart, User } from "./types";
+import type { Cart, Order, PaymentResult, User } from "./types";
 
 export const queryKeys = {
   me: ["me"] as const,
@@ -107,15 +107,36 @@ export function useOrder(id: string | undefined) {
   };
 }
 
-/** Turn the bag into an order. On success the bag is emptied and the order is cached. */
-export function usePlaceOrder() {
+/** Once an order is placed or paid: empty the bag and cache the order. */
+function useOrderCompleted() {
   const queryClient = useQueryClient();
+  return (order: Order) => {
+    queryClient.setQueryData(queryKeys.cart, EMPTY_CART);
+    queryClient.setQueryData(queryKeys.order(order.id), order);
+    void queryClient.invalidateQueries({ queryKey: queryKeys.orders, exact: true });
+  };
+}
+
+/**
+ * Turn the bag into an order. It resolves with the Razorpay session to pay with; the bag stays
+ * until `useConfirmPayment` succeeds. With nothing to pay (`payment: null`), the order is done.
+ */
+export function usePlaceOrder() {
+  const completed = useOrderCompleted();
   return useMutation({
     mutationFn: api.placeOrder,
-    onSuccess: (order) => {
-      queryClient.setQueryData(queryKeys.cart, EMPTY_CART);
-      queryClient.setQueryData(queryKeys.order(order.id), order);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.orders, exact: true });
+    onSuccess: ({ order, payment }) => {
+      if (!payment) completed(order);
     },
+  });
+}
+
+/** Send Razorpay's result to the backend to verify. On success the bag is emptied. */
+export function useConfirmPayment() {
+  const completed = useOrderCompleted();
+  return useMutation({
+    mutationFn: ({ orderId, result }: { orderId: string; result: PaymentResult }) =>
+      api.confirmPayment(orderId, result),
+    onSuccess: completed,
   });
 }

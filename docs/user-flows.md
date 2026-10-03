@@ -71,7 +71,8 @@ product ──add to bag──▶ signed in? ──no──▶ /auth ──sign 
 /cart ──checkout──▶ signed in? ──no──▶ /auth
                         │ yes
                         ▼
-      /checkout ──validate address──▶ POST /orders ──▶ /order-confirmation?id=AUR-…
+      /checkout ──validate address──▶ POST /orders ──▶ Razorpay window ──paid──▶
+      POST /orders/:id/payment ──▶ /order-confirmation?id=AUR-…
 ```
 
 Every action shows a pending state (disabled button, "…ing" label) and, on failure, the
@@ -94,9 +95,13 @@ server's message in place. Endpoints are in `backend-handoff.md`.
 - **Checkout** (`/checkout`): asks for sign-in if needed. Then "ordering as {name}", a delivery
   address form (full name, pre-filled; Indian mobile; house and street; optional area; city;
   state from a list; 6-digit PIN code), validated field by field in the browser. The server's
-  field messages (422) show in the same places. "place order" sends `POST /orders`; the server
-  prices the bag, creates the order and empties the bag. A "demonstration checkout" note shows
-  only while the mock is in use. Payment is still to be designed (see `backend-handoff.md`).
+  field messages (422) show in the same places. A "payment" panel explains Razorpay (UPI,
+  cards, net banking, wallets). "pay ₹…" sends `POST /orders` ("placing your order…"), opens
+  Razorpay's window ("waiting for payment…"), then confirms with `POST /orders/:id/payment`
+  ("confirming payment…") and goes to the confirmation. Closing the window keeps the bag and
+  shows "the payment wasn't completed"; a confirmation failure tells the visitor not to pay
+  again. With the mock and no Razorpay test key, it's a "demonstration checkout" with a "place
+  order" button instead. Details in `payments.md`.
 - **Order confirmation** (`/order-confirmation?id=…`): loads that order (`GET /orders/:id`) and
   shows "thank you, {first name}", the lines, total and delivery address. It survives a refresh.
 - **Account** (`/account`): signed out shows "you're signed out" and a sign-in link. Signed in

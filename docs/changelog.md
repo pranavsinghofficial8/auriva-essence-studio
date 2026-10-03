@@ -2,6 +2,19 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: Razorpay payments
+
+- Checkout now takes payment with Razorpay's own window (UPI, cards, net banking, wallets).
+  "pay ₹…" creates the order, opens Razorpay, then has the backend verify the payment before
+  showing the confirmation. The bag is kept until the payment goes through, so closing the
+  window loses nothing.
+- New `src/lib/razorpay.ts`; `POST /orders` now returns `{ order, payment }`, and there's a new
+  `POST /orders/:id/payment` and a `pending_payment` order status. The backend's side
+  (signature checks, webhook) is specified in `backend-handoff.md`.
+- Until the backend exists, setting `VITE_RAZORPAY_KEY_ID` to a Razorpay test key id makes the
+  mock open the real window in test mode. Without it, checkout stays a demonstration.
+- New owner's guide: `docs/payments.md`.
+
 ## 2026-10-03: Google sign-in set up
 
 - Created the Google OAuth client (project "Auriva", consent screen External, in Testing) and
