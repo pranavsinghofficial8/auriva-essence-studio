@@ -2,6 +2,19 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: docs brought up to date
+
+- `architecture.md` no longer says there is no backend; its data-layer table now covers search,
+  payments, bulk enquiries and the new helper files, with short notes on how payments and search
+  flow.
+- `status.md` records the Razorpay test-mode trial and what's left (KYC, which also switches on
+  UPI; live keys), the Google client secret to reset, the local `.env.local` and dev server, and
+  that the shared handoff page was updated.
+- `design-system.md` gained the form controls (fields, choice chips, the two-way switch, the
+  suggestion highlight); `user-flows.md` lists the nav's search icon and the footer's bulk link.
+- `README.md` notes where the build now departs from the original brief (search) and lists
+  `VITE_RAZORPAY_KEY_ID`.
+
 ## 2026-10-03: search
 
 - A search button in the nav (also `/` or ⌘K / Ctrl K) opens a search panel with suggestions as

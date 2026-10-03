@@ -7,13 +7,15 @@ that, each step below calls the endpoint listed in `backend-handoff.md`.
 
 ## Global navigation
 
-- **Nav** (`components/auriva/Nav.tsx`): menu toggle on the left, logo in the centre, "sign in"
-  (or the account holder's first name) and the bag with its item count on the right. It's
+- **Nav** (`components/auriva/Nav.tsx`): menu toggle on the left, logo in the centre, the search
+  icon, "sign in" (or the account holder's first name) and the bag with its item count on the
+  right. Search opens the search panel (see Search below). It's
   transparent over full-screen heroes and turns solid ivory once scrolled past `threshold`. The
   menu opens a panel: home, shop (incense sticks / cones / bambooless sticks), journal, about us,
   contact us. Pages can pass `hidden` to slide the bar away (the About page does this on its
   opening screen).
-- **Footer**: the collections, journal, about, contact, sign in, and the tagline.
+- **Footer**: the collections, journal, about, contact, bulk & gifting (`/contact#bulk`), sign in,
+  and the tagline.
 
 ## Discovery
 

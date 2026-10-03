@@ -1,8 +1,10 @@
 # Architecture
 
 Auriva is a single TanStack Start app: server-rendered React pages with client-side navigation,
-built by Vite and deployed through nitro (Cloudflare by default). There is no backend. All data
-is static TypeScript, and "commerce" state lives in the visitor's browser.
+built by Vite and deployed through nitro (Cloudflare by default). Every read and write goes
+through `src/lib/api/`, which calls a separately built backend once `VITE_API_URL` is set and,
+until then, an in-browser mock (catalog and journal from code; account, bag and orders in
+localStorage). Payments open Razorpay's own checkout window.
 
 ## Request lifecycle
 
@@ -67,15 +69,19 @@ page / loader ──▶ lib/api/index.ts ──VITE_API_URL set──▶ client.
 components ──▶ lib/api/hooks.ts (TanStack Query: useUser, useCart, mutations) ──▶ index.ts
 ```
 
-| Module                  | Holds                                                                                                                       |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `lib/api/index.ts`      | one async function per endpoint (catalog, journal, auth, bag, orders, forms)                                                |
-| `lib/api/client.ts`     | `request()` (base URL, `credentials: "include"`, JSON), `ApiError`, `errorMessage()`, `usingMockApi`                        |
-| `lib/api/types.ts`      | shared shapes: `User`, `Cart`, `Address`, `Order`, page payloads, form inputs                                               |
-| `lib/api/hooks.ts`      | TanStack Query hooks and mutations for the visitor's account, bag and orders                                                |
-| `lib/api/mock.ts`       | in-browser implementation used until the backend exists (localStorage keys `auriva.account`, `auriva.bag`, `auriva.orders`) |
-| `lib/auriva-catalog.ts` | 3 `categories` and 10 `products` (the mock's data and the seed for the backend), plus the static `promises` copy            |
-| `lib/auriva-journal.ts` | journal posts (the mock's data and the seed for the backend)                                                                |
+| Module                   | Holds                                                                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `lib/api/index.ts`       | one async function per endpoint (catalog, search, journal, auth, bag, orders and payment, contact and bulk enquiries)       |
+| `lib/api/client.ts`      | `request()` (base URL, `credentials: "include"`, JSON), `ApiError`, `errorMessage()`, `usingMockApi`                        |
+| `lib/api/types.ts`       | shared shapes: `User`, `Cart`, `Address`, `Order`, `PaymentSession`, `SearchResults`, `BulkEnquiry`, page payloads, inputs  |
+| `lib/api/hooks.ts`       | TanStack Query hooks and mutations for the account, bag, orders, payment confirmation and search suggestions                |
+| `lib/api/mock.ts`        | in-browser implementation used until the backend exists (localStorage keys `auriva.account`, `auriva.bag`, `auriva.orders`) |
+| `lib/api/mock-search.ts` | the mock's search engine, and the reference for how the backend's `GET /search` should match and rank                       |
+| `lib/razorpay.ts`        | loads Razorpay Checkout and opens the payment window for a `PaymentSession`                                                 |
+| `lib/recent-searches.ts` | the visitor's recent searches (localStorage `auriva.recent-searches`) and the popular searches list                         |
+| `lib/validation.ts`      | shared zod rules (the Indian mobile number, used by checkout and the bulk enquiry form)                                     |
+| `lib/auriva-catalog.ts`  | 3 `categories` and 10 `products` (the mock's data and the seed for the backend), plus the static `promises` copy            |
+| `lib/auriva-journal.ts`  | journal posts (the mock's data and the seed for the backend)                                                                |
 
 The `QueryClient` in `router.tsx` doesn't retry 4xx errors (e.g. 401 when signed out), retries
 other failures once, and treats data as fresh for 30s.
@@ -86,6 +92,15 @@ ties products to their glyphs in `components/auriva/aura-marks.tsx`.
 Google sign-in (`lib/google-auth.ts`) loads Google's script only on `/auth`. The button returns
 an ID token that `api.signInWithGoogle` sends to the backend to verify (the mock only decodes and
 sanity-checks it). See `google-sign-in.md`.
+
+Payments (`lib/razorpay.ts`, `routes/checkout.tsx`): `POST /orders` returns the order and a
+Razorpay session; the page opens Razorpay's window, then sends Razorpay's result to
+`POST /orders/:id/payment` for the backend to verify. Without a backend, `VITE_RAZORPAY_KEY_ID`
+lets the mock open the window in test mode. See `payments.md`.
+
+Search (`components/auriva/SearchPanel.tsx`, `routes/search.tsx`): the panel asks
+`GET /search?limit=6` as the visitor types (debounced, cached by TanStack Query); the results page
+loads `GET /search` in its loader and filters and sorts on the client.
 
 ## Build and tooling
 
@@ -101,5 +116,5 @@ sanity-checks it). See `google-sign-in.md`.
 
 The project started in Lovable and moved to Claude Code-only development in October 2026. The
 Lovable sync, its bun lockfile, its editor error reporting and the Lovable-hosted asset links
-were removed. The live site at `auriva-essence-studio.lovable.app` is Lovable-hosted, so new
-hosting is needed for changes to go live.
+were removed. The old site at `auriva-essence-studio.lovable.app` no longer receives changes;
+new hosting is needed for changes to go live (see `status.md`).

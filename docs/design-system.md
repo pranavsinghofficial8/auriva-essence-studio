@@ -35,6 +35,19 @@ the About page's chapter bar.
 - **Buttons**: a square 1px outline that fills espresso on hover, or a solid espresso fill. Never
   rounded or bold. A base rule gives every enabled button the hand cursor.
 
+## Form controls and choices
+
+- **Fields**: no boxes. A label in `label-track` above a 1px bottom line that darkens on focus and
+  turns red when invalid, with the message underneath in 13px. The first field to fix gets focus.
+- **Choice chips** (search filters, popular searches): square 1px outlines, `px-4 py-2`; the chosen
+  one fills espresso with ivory text.
+- **Two-way switch** (the contact form's "a note" / "bulk & gifting"): `label-track` words on a
+  hairline; the chosen one darkens with a 1px underline. Built from radio inputs, so arrow keys work.
+- **Highlighted suggestion** (search panel): a `stone` fill. `parchment` is too close to ivory to
+  see.
+- **Text that should cut off with "…"** inside a grid needs `minmax(0, 1fr)` columns; plain `1fr`
+  grows to fit the text and pushes things off small screens.
+
 ## Components (`src/components/auriva/`)
 
 | Component                      | Purpose                                                                                                                            |

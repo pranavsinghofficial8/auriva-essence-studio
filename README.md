@@ -41,6 +41,8 @@ Menu dropdown (full-width overlay or slide-in panel):
 
 No search bar. Cart = shopping bag icon only.
 
+> **Since changed (2026-10-03):** at the owner's request the nav now has a search icon (a search panel and a `/search` results page). See [`docs/changelog.md`](docs/changelog.md).
+
 ━━━━━━━━━━━━━━━━━━━━━━
 SECTION 1 — HERO (Full viewport)
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -226,4 +228,4 @@ npm run dev     # http://localhost:8080
 npm run build   # production build (Cloudflare target)
 ```
 
-Copy `.env.example` to `.env.local` to point the site at the backend (`VITE_API_URL`) or enable Google sign-in (`VITE_GOOGLE_CLIENT_ID`).
+Copy `.env.example` to `.env.local` to point the site at the backend (`VITE_API_URL`), enable Google sign-in (`VITE_GOOGLE_CLIENT_ID`) or try Razorpay test payments without a backend (`VITE_RAZORPAY_KEY_ID`). Where things stand and what's next: [`docs/status.md`](docs/status.md).
