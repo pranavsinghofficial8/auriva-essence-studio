@@ -56,6 +56,7 @@
   --color-stone-deep: var(--stone-deep);
   --color-taupe: var(--taupe);
   --color-gold: var(--gold);
+  --color-bronze: var(--bronze);
   --color-espresso: var(--espresso);
   --color-espresso-foreground: var(--espresso-foreground);
   --color-parchment: var(--parchment);
@@ -87,6 +88,8 @@
   --stone-deep: oklch(0.8741 0.0180 73.1);   /* #ddd4c9 */
   --taupe: oklch(0.7718 0.0445 89.4);        /* #c0b495 */
   --gold: oklch(0.7718 0.0445 89.4);
+  /* Gold deepened toward espresso: reads on ivory where plain gold is too faint. */
+  --bronze: color-mix(in oklab, var(--gold) 55%, var(--espresso));
   --espresso: oklch(0.2934 0.0091 53.1);     /* #302b28 */
   --espresso-foreground: oklch(0.9854 0.0093 113.2);
   --walnut: oklch(0.2934 0.0091 53.1);

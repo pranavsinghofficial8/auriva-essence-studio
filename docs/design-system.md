@@ -8,15 +8,16 @@ in `src/styles.css` and `src/components/auriva/`.
 
 Defined in `:root` as oklch and exposed to Tailwind through `@theme inline`.
 
-| Token                                           | Hex       | Use                             |
-| ----------------------------------------------- | --------- | ------------------------------- |
-| `ivory` (`background`)                          | `#fafbf4` | page background                 |
-| `parchment` / `mist` (`secondary`)              | `#f4f3e8` | alternate sections              |
-| `stone`                                         | `#e6e1d6` | quote band, hover fills         |
-| `sand` (`accent`)                               | `#e4dece` | collection, materials           |
-| `stone-deep` (`border`)                         | `#ddd4c9` | hairlines, grid gaps            |
-| `taupe` / `gold`                                | `#c0b495` | accents, eyebrow labels on dark |
-| `espresso` / `walnut` (`foreground`, `primary`) | `#302b28` | text, dark bands, solid buttons |
+| Token                                           | Hex                 | Use                                                          |
+| ----------------------------------------------- | ------------------- | ------------------------------------------------------------ |
+| `ivory` (`background`)                          | `#fafbf4`           | page background                                              |
+| `parchment` / `mist` (`secondary`)              | `#f4f3e8`           | alternate sections                                           |
+| `stone`                                         | `#e6e1d6`           | quote band, hover fills                                      |
+| `sand` (`accent`)                               | `#e4dece`           | collection, materials                                        |
+| `stone-deep` (`border`)                         | `#ddd4c9`           | hairlines, grid gaps                                         |
+| `taupe` / `gold`                                | `#c0b495`           | accents, eyebrow labels on dark                              |
+| `bronze`                                        | gold 55% + espresso | accents that must read on ivory (About chapter bar progress) |
+| `espresso` / `walnut` (`foreground`, `primary`) | `#302b28`           | text, dark bands, solid buttons                              |
 
 `--radius` is `0`: corners are square everywhere. Circles appear only in the aura medallions and
 the About page's chapter bar.

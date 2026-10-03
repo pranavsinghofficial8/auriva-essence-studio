@@ -158,7 +158,7 @@ in this folder for detail.
   `server-only` package (ESLint blocks it).
 - **Styling**: Tailwind utilities plus brand tokens from `styles.css`. Colors are oklch CSS
   variables exposed as `bg-ivory`, `bg-walnut`/`bg-espresso`, `bg-parchment`, `bg-stone`,
-  `bg-sand`, `text-taupe`, etc. New colors go in `:root` and in the `@theme inline` block.
+  `bg-sand`, `text-taupe`, `bg-bronze` (gold deepened toward espresso, for accents on ivory), etc. New colors go in `:root` and in the `@theme inline` block.
   `--radius` is `0` (square corners everywhere).
   - Custom utilities: `label-track` (small tracked uppercase labels), `hairline`, `reveal`,
     `animate-breathe`, `animate-rise`, `animate-drift`, `tile-pan`, `aura-float`, `hero-smoke*`.

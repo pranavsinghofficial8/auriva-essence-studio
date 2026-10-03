@@ -169,7 +169,11 @@ function TextTile({
   );
 }
 
-function PhotoTile({ src, alt }: { src: string; alt: string }) {
+/**
+ * `fadeTop` lets a photo in the grid's first row rise out of the hero's ivory fade instead of
+ * starting at a hard edge ("lg" = only where it sits in the first row, on wide screens).
+ */
+function PhotoTile({ src, alt, fadeTop }: { src: string; alt: string; fadeTop?: "always" | "lg" }) {
   return (
     <div className="group relative aspect-[4/3] overflow-hidden bg-sand">
       <img
@@ -179,6 +183,14 @@ function PhotoTile({ src, alt }: { src: string; alt: string }) {
         className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
       />
       <div className="pointer-events-none absolute inset-0 bg-espresso/0 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/15" />
+      {fadeTop ? (
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-ivory to-transparent ${
+            fadeTop === "lg" ? "hidden lg:block" : ""
+          }`}
+        />
+      ) : null}
     </div>
   );
 }
@@ -243,7 +255,9 @@ function Home() {
         </div>
         <div className="animate-drift pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_52%_58%,color-mix(in_oklab,var(--ivory)_55%,transparent),transparent_48%)]" />
         <div className="animate-breathe pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_34%_40%,color-mix(in_oklab,var(--ivory)_38%,transparent),transparent_38%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ivory/40 via-transparent to-ivory/55" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ivory/40 via-transparent to-transparent" />
+        {/* The photo dissolves into ivory at its foot, so the story grid grows out of it. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-b from-transparent via-ivory/60 to-ivory" />
 
         <div className="absolute inset-x-0 bottom-[13vh] flex flex-col items-center px-6 text-center text-espresso">
           <h1 className="animate-rise max-w-3xl text-[32px] leading-[1.25] font-extralight lowercase sm:text-[52px]">
@@ -266,7 +280,7 @@ function Home() {
         id="philosophy"
         className="grid scroll-mt-24 grid-cols-1 gap-px bg-stone-deep sm:grid-cols-2 lg:grid-cols-3"
       >
-        <PhotoTile src={gridEmber} alt="An incense stick glowing at the ember" />
+        <PhotoTile src={gridEmber} alt="An incense stick glowing at the ember" fadeTop="always" />
         <TextTile
           Icon={AuraMark}
           heading="every ritual begins with intention."
@@ -276,7 +290,7 @@ function Home() {
           hash="france"
           tone="bg-ivory hover:bg-parchment"
         />
-        <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" />
+        <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" fadeTop="lg" />
         <TextTile
           Icon={PetalMark}
           heading="crafted with purpose."

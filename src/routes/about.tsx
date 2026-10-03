@@ -322,7 +322,7 @@ function ChapterTracker({
         visible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-4 opacity-0"
       }`}
     >
-      <div className="mx-auto flex w-full max-w-[1200px] items-center gap-3 rounded-full border border-border/60 bg-background/80 px-5 py-3 backdrop-blur-md sm:gap-6 sm:px-9 sm:py-4">
+      <div className="mx-auto flex w-full max-w-[1200px] items-center gap-3 rounded-full border border-foreground/10 bg-background/90 px-5 py-3 backdrop-blur-md sm:gap-6 sm:px-9 sm:py-4">
         {chapters.map((c, i) => (
           <div key={c.id} className="flex flex-1 items-center gap-3 last:flex-none sm:gap-5">
             <button
@@ -332,7 +332,7 @@ function ChapterTracker({
             >
               <c.Icon
                 className={`h-5 w-5 transition-colors duration-500 sm:h-6 sm:w-6 ${
-                  active === i ? "text-gold" : "text-muted-foreground"
+                  active === i ? "text-bronze" : "text-muted-foreground"
                 }`}
               />
               <span
@@ -344,14 +344,14 @@ function ChapterTracker({
               </span>
             </button>
             {i < chapters.length - 1 ? (
-              <span className="relative hidden h-px flex-1 bg-border sm:block">
+              <span className="relative hidden h-px flex-1 bg-foreground/15 sm:block">
                 <span
-                  className="absolute inset-y-0 left-0 bg-gold transition-[width] duration-200"
+                  className="absolute inset-y-0 left-0 bg-bronze transition-[width] duration-200"
                   style={{ width: `${(progress[i] ?? 0) * 100}%` }}
                 />
                 <span
-                  className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-gold transition-[left] duration-200"
-                  style={{ left: `calc(${(progress[i] ?? 0) * 100}% - 3px)` }}
+                  className="absolute top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-bronze transition-[left] duration-200"
+                  style={{ left: `calc(${(progress[i] ?? 0) * 100}% - 4px)` }}
                 />
               </span>
             ) : null}

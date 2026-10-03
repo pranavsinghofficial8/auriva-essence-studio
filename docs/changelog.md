@@ -2,6 +2,16 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: softer hero edge, clearer About chapter bar
+
+- Homepage: the hero photo now dissolves fully into ivory at its foot, and the story grid's
+  first-row photos (`PhotoTile` with `fadeTop`) rise out of that ivory, so the hard line between
+  the two sections is gone. The text tile between them is untouched.
+- About page chapter bar: its track was a pale line on a pale pill and the gold progress barely
+  showed. The track is now a faint espresso line, and the progress fill, its dot (slightly
+  larger) and the active chapter icon use a new `bronze` token (gold deepened toward espresso).
+  The pill is a little more solid, with a firmer edge.
+
 ## 2026-10-03: docs brought up to date
 
 - `architecture.md` no longer says there is no backend; its data-layer table now covers search,

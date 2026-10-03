@@ -23,7 +23,9 @@ that, each step below calls the endpoint listed in `backend-handoff.md`.
 
 1. **Hero**: the lotus photo with animated smoke (`HeroSmoke`: a WebGL shader plus a gentle
    SVG warp of the photo's own wisps; hidden on narrow portrait screens and with reduced motion)
-   and "enter the ritual", which scrolls smoothly to the collection.
+   and "enter the ritual", which scrolls smoothly to the collection. The photo dissolves into
+   ivory at its foot, and the first row of the story grid's photos rises out of that ivory, so
+   the two sections read as one.
 2. **Story grid**: photo tiles and three text tiles. "our philosophy" → `/about#france`, "our
    craft" → `/about#aura`, "our story" → `/about#awaken`.
 3. **Quote**: "at auriva, we renew flowers into incense…" unfurls word by word (`RevealWords`), again each time the visitor scrolls back to it.
