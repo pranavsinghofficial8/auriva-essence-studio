@@ -80,6 +80,18 @@ export type PaymentResult = {
   razorpaySignature?: string;
 };
 
+/** `GET /search`: what matched a shopper's query, best first. */
+export type SearchResults = {
+  query: string;
+  products: Product[];
+  categories: Category[];
+  posts: JournalPost[];
+  /** How many products matched in all (`products` may be capped by `limit`). */
+  total: number;
+  /** Set when typos were corrected, e.g. "sandlewood" → "sandalwood". */
+  correctedQuery?: string;
+};
+
 export type CategoryPage = { category: Category; products: Product[] };
 export type ProductPage = { product: Product; category: Category; related: Product[] };
 export type JournalPostPage = { post: JournalPost; more: JournalPost[] };

@@ -2,6 +2,18 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: search
+
+- A search button in the nav (also `/` or ⌘K / Ctrl K) opens a search panel with suggestions as
+  you type: products with photo and price, collections and journal posts, with keyboard
+  navigation, recent searches (kept in the browser) and popular searches.
+- A full results page at `/search?q=…` with collection filters, sorting by relevance, price or
+  name, typo correction ("showing results for …"), and helpful empty and no-results states.
+- New endpoint `GET /search` (shape and matching rules in `backend-handoff.md`); the mock's
+  engine is `lib/api/mock-search.ts`: all words must match, prefixes, small typos, plurals and
+  a few synonyms, and names outrank notes.
+- Formatting `Nav.tsx`, `marks.tsx` and `auriva-journal.ts` cleared the last lint errors.
+
 ## 2026-10-03: one contact form
 
 - The separate bulk & gifting section made the contact page feel long and repetitive, so the

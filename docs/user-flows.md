@@ -61,6 +61,30 @@ card → `/shop/$category`.
 4. **The ritual**: light / place / stay steps.
 5. **You may also like**: four other products.
 
+## Search
+
+```
+nav search icon / "/" / ⌘K ──▶ search panel ──type──▶ suggestions (GET /search?limit=6)
+        │ ↑↓ + Enter or click a suggestion ──▶ product / collection / journal post
+        └ Enter with nothing highlighted, or "see all N results" ──▶ /search?q=…
+```
+
+- **Search panel** (every page, from the nav): a large input with the cursor in it. Empty, it
+  shows the visitor's recent searches (this browser only, with "clear") and popular searches.
+  Typing shows, after a short pause: "showing results for …" if a typo was corrected, up to 6
+  products (photo, name, aura and notes, price), matching collections and up to 2 journal
+  posts, then "see all N results →". ↑/↓ move through them, Enter opens the highlighted one,
+  Escape or a click outside closes. Nothing found: a note and popular searches.
+- **Results page** (`/search?q=…`): the query in a large input, "N fragrances for …", collection
+  filter chips with counts, a sort menu (most relevant, price low to high or high to low, name
+  A to Z), a product grid (2 columns on phones, up to 4 on desktop), matching collections and
+  "from the journal". Filter and sort live in the URL (`&collection=`, `&sort=`), so results
+  can be shared. No query: popular searches. No results: a spelling hint, popular searches and
+  "browse the whole collection →". The page is `noindex`.
+- What matches: every word must match (if none match all of them, products matching any word
+  are shown); words match by prefix, small typos are forgiven ("sandlewood"), plurals and a few
+  synonyms work ("oud", "agarbatti", "sleep"), and names outrank notes, moods and descriptions.
+
 ## Account, bag and checkout
 
 ```

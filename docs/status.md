@@ -14,8 +14,8 @@ other docs in this folder; what changed and when is in `changelog.md`.
   are needed.
 - **Tooling:** developed only in Claude Code (the Lovable sync was dropped on 2026-10-02). npm and
   `package-lock.json`. Work is committed and pushed straight to `main` when the owner asks.
-- **Checks:** `npx tsc --noEmit` is clean and `npm run build` passes. `npm run lint` has 6
-  pre-existing Prettier-only errors (see Known issues in `CLAUDE.md`).
+- **Checks:** `npx tsc --noEmit` is clean and `npm run build` passes. `npm run lint` has no
+  errors (only fast-refresh warnings).
 
 ## Waiting on decisions or inputs from the owner
 
@@ -45,7 +45,8 @@ data (not the types) from `lib/auriva-catalog.ts` and `lib/auriva-journal.ts`.
 
 ## Optional clean-ups
 
-- Fix the 6 Prettier errors with `npx eslint . --fix` and `npx prettier --write src/styles.css`.
+- Format `styles.css` with `npx prettier --write src/styles.css` (the last file from the
+  Lovable code that fails `prettier --check`).
 - Replace `@lovable.dev/vite-tanstack-config` with an explicit Vite config if it ever gets in the
   way. It's the build setup and works without Lovable.
 

@@ -19,8 +19,7 @@ export const journalPosts: JournalPost[] = [
   {
     slug: "which-auriva-scent-matches-your-mood",
     title: "A five-minute ritual before the day begins",
-    excerpt:
-      "A quick, personal guide to picking a fragrance based on how you want to feel.",
+    excerpt: "A quick, personal guide to picking a fragrance based on how you want to feel.",
     category: "Morning",
     readTime: "4 min",
     image: journalMorning,
@@ -57,8 +56,7 @@ export const journalPosts: JournalPost[] = [
   {
     slug: "a-guide-to-aurivas-10-fragrances",
     title: "The quiet transition from work to home",
-    excerpt:
-      "The full lineup, one by one — the aura, ritual, and inspiration behind each scent.",
+    excerpt: "The full lineup, one by one — the aura, ritual, and inspiration behind each scent.",
     category: "Evening",
     readTime: "7 min",
     image: journalDesk,

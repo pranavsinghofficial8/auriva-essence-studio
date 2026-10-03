@@ -39,7 +39,8 @@ the About page's chapter bar.
 
 | Component                      | Purpose                                                                                                                            |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `Nav`                          | fixed top bar; transparent over heroes, solid after `threshold`; menu panel; `hidden` slides it away                               |
+| `Nav`                          | fixed top bar; transparent over heroes, solid after `threshold`; menu panel; search button; `hidden` slides it away                |
+| `SearchPanel`                  | the search drop-down under the nav: big input, suggestions as you type, recent and popular searches; opened by the nav, `/` or ⌘K  |
 | `Footer`                       | links and tagline on espresso                                                                                                      |
 | `Logo`                         | the PNG wordmark (`light` variant for dark backgrounds) with the optional tagline                                                  |
 | `Reveal` / `useReveal`         | fade and rise when scrolled into view                                                                                              |
@@ -47,7 +48,7 @@ the About page's chapter bar.
 | `HeroSmoke`                    | WebGL smoke rising from the homepage hero photo                                                                                    |
 | `AuraGlyph`                    | the thin-line symbol for each aura (`strokeWidth` adjustable)                                                                      |
 | `AuraMedallion`                | a glyph in a circle; inside a `group` it fills and ripples on hover; `tone="light"` ripples continuously on dark backgrounds       |
-| `marks.tsx`, `story-marks.tsx` | brand and About-page line icons                                                                                                    |
+| `marks.tsx`, `story-marks.tsx` | brand and About-page line icons (including `BagIcon` and `SearchIcon`)                                                             |
 
 Don't use the bare `AuraGlyph` in `text-taupe` on light backgrounds; it's too faint to read.
 Use the medallion or a dark stroke.

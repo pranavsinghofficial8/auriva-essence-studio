@@ -5,7 +5,7 @@
  * the real state loads in the browser.
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import * as api from "./index";
@@ -16,6 +16,7 @@ export const queryKeys = {
   cart: ["cart"] as const,
   orders: ["orders"] as const,
   order: (id: string) => ["orders", id] as const,
+  search: (query: string, limit?: number) => ["search", query, limit ?? null] as const,
 };
 
 export const EMPTY_CART: Cart = { lines: [], count: 0, subtotal: 0 };
@@ -139,4 +140,24 @@ export function useConfirmPayment() {
       api.confirmPayment(orderId, result),
     onSuccess: completed,
   });
+}
+
+/**
+ * As-you-type search suggestions for `query` (already debounced by the caller). Keeps showing
+ * the previous results while the next ones load, so the list doesn't flicker.
+ */
+export function useSearchSuggestions(query: string, limit = 6) {
+  const q = query.trim();
+  const result = useQuery({
+    queryKey: queryKeys.search(q, limit),
+    queryFn: () => api.search(q, { limit }),
+    enabled: q.length > 0,
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60_000,
+  });
+  return {
+    results: q ? (result.data ?? null) : null,
+    isLoading: !!q && result.isFetching,
+    error: result.error,
+  };
 }

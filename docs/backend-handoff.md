@@ -213,6 +213,39 @@ The frontend validates before sending; please validate again on the server:
 These are fetched during server-side rendering, so cache them generously (e.g.
 `Cache-Control: public, max-age=60, stale-while-revalidate=600`).
 
+### Search (public, no auth)
+
+| Method | Path                         | Returns         | Used by                                                     |
+| ------ | ---------------------------- | --------------- | ----------------------------------------------------------- |
+| GET    | `/search?q=<text>&limit=<n>` | `SearchResults` | the nav's search panel (`limit=6`) and `/search` (no limit) |
+
+```json
+{
+  "query": "sandlewood",
+  "products": [{ "…": "a full Product" }],
+  "categories": [{ "…": "a full Category" }],
+  "posts": [{ "…": "a full JournalPost" }],
+  "total": 2,
+  "correctedQuery": "sandalwood"
+}
+```
+
+- `products` best match first; `limit` caps `products` (and `posts`, which are capped at 2 with
+  a limit and 6 without). `total` is the number of matching products before the cap (it's
+  shown as "see all N results"). `categories` are collections whose name matches.
+- `correctedQuery` is set only when results come from typo correction; leave it out otherwise.
+- An empty or blank `q` returns empty lists and `total: 0`. Ignore case and accents.
+- **Matching, to feel like the mock** (`src/lib/api/mock-search.ts` is the reference):
+  every word must match (if nothing matches all of them, return products matching any, ranked
+  by how many words matched); words match by prefix ("sand" finds Sandalwood); small typos
+  are forgiven (1 for words of 5–7 letters, 2 from 8), but only when no item contains the word
+  as typed; simple plurals and a short synonym list ("oud" → Oudh, "agarbatti" → sticks,
+  "sleep" → night). Rank name matches above collection, aura and notes, then best-for, then
+  descriptions. Postgres full-text search with `pg_trgm`, or a hosted engine such as
+  Meilisearch or Typesense, does all of this.
+- It's called on every pause in typing, so keep it fast and cacheable
+  (`Cache-Control: public, max-age=60`).
+
 ### Auth
 
 | Method | Path           | Body                        | Returns                                                            |

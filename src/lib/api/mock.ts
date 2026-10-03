@@ -13,6 +13,7 @@ import { forgetGoogleSession, readGoogleCredential } from "@/lib/google-auth";
 import { razorpayKeyId } from "@/lib/razorpay";
 
 import { ApiError } from "./client";
+import { searchCatalog } from "./mock-search";
 import type {
   Address,
   BulkEnquiry,
@@ -87,6 +88,12 @@ export async function getProductPage(slug: string): Promise<ProductPage> {
   if (!product || !category) throw notFound("Product");
   const related = products.filter((p) => p.slug !== product.slug).slice(0, 4);
   return { product, category, related };
+}
+
+/* ---------------------------------- search ---------------------------------- */
+
+export async function search(query: string, limit?: number) {
+  return searchCatalog(query, limit);
 }
 
 /* ---------------------------------- journal --------------------------------- */

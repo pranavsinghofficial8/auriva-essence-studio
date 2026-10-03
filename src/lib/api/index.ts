@@ -24,6 +24,7 @@ import type {
   Product,
   ProductPage,
   RitualStory,
+  SearchResults,
   SignInInput,
   SignUpInput,
   User,
@@ -53,6 +54,17 @@ export const getProducts = (filter?: { featured?: "bestseller" }): Promise<Produ
 /** GET /products/:slug. Resolves to null when the product doesn't exist (404). */
 export const getProductPage = (slug: string): Promise<ProductPage | null> =>
   orNull(usingMockApi ? mock.getProductPage(slug) : request(`/products/${enc(slug)}`));
+
+/* ---------------------------------- search ---------------------------------- */
+
+/**
+ * GET /search?q=…&limit=…: products, collections and journal posts matching `query`, best first.
+ * `limit` caps the products (and posts) for the as-you-type suggestions.
+ */
+export const search = (query: string, options: { limit?: number } = {}): Promise<SearchResults> =>
+  usingMockApi
+    ? mock.search(query, options.limit)
+    : request(`/search?q=${enc(query)}${options.limit ? `&limit=${options.limit}` : ""}`);
 
 /* ---------------------------------- journal --------------------------------- */
 
