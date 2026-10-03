@@ -179,9 +179,11 @@ in this folder for detail.
 ## Known issues (pre-existing, not blocking the build)
 
 - `npx tsc --noEmit` is clean.
-- `npm run lint` reports 7 Prettier-only formatting errors (auto-fixable with
-  `npx eslint . --fix`) in `Footer.tsx`, `Nav.tsx`, `marks.tsx` and `auriva-journal.ts`, and
+- `npm run lint` reports 6 Prettier-only formatting errors (auto-fixable with
+  `npx eslint . --fix`) in `Nav.tsx`, `marks.tsx` and `auriva-journal.ts`, and
   `styles.css` fails `prettier --check`. They date from the original Lovable-generated code.
+- In development the console shows "Transition was skipped" / "aborted because of invalid
+  state" errors when pages change in quick succession (the crossfade is cut short). Harmless.
 - Fast-refresh warnings: `Reveal.tsx` exports the `useReveal` hook alongside components, and
   several shadcn `ui/` files export variants.
 
@@ -191,6 +193,8 @@ in this folder for detail.
   set, `src/lib/api/mock.ts` stands in: nothing leaves the browser, the Google ID token is only
   sanity-checked (the real backend verifies it), and contact or journal submissions go
   nowhere. Don't rely on the mock for anything security-sensitive.
+- Phone numbers are validated with `indianMobile` (`lib/validation.ts`), shared by checkout and
+  the bulk enquiry form.
 - Env vars (public; typed in `src/vite-env.d.ts`, listed in `.env.example`; read at build time):
   - `VITE_API_URL`: the backend base URL. Unset means the in-browser mock.
   - `VITE_GOOGLE_CLIENT_ID`: enables "Continue with Google" (see `google-sign-in.md`).

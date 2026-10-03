@@ -14,7 +14,7 @@ other docs in this folder; what changed and when is in `changelog.md`.
   are needed.
 - **Tooling:** developed only in Claude Code (the Lovable sync was dropped on 2026-10-02). npm and
   `package-lock.json`. Work is committed and pushed straight to `main` when the owner asks.
-- **Checks:** `npx tsc --noEmit` is clean and `npm run build` passes. `npm run lint` has 7
+- **Checks:** `npx tsc --noEmit` is clean and `npm run build` passes. `npm run lint` has 6
   pre-existing Prettier-only errors (see Known issues in `CLAUDE.md`).
 
 ## Waiting on decisions or inputs from the owner
@@ -27,6 +27,7 @@ other docs in this folder; what changed and when is in `changelog.md`.
 | Google sign-in    | Done locally (client ID set up and tested on 2026-10-03). For launch: add the live address and domain to the client's JavaScript origins and publish the consent screen (see `google-sign-in.md`).                              | Set `VITE_GOOGLE_CLIENT_ID` in the host's build environment. The backend must implement `POST /auth/google`.                             |
 | Fragrance photos  | Photos evoking Jasmine, Palo Santo, Sandalwood, Oudh, and Camphor & Tulsi (landscape). The other five have one.                                                                                                                 | Add each to `src/assets/` and set `ritualImage` for that product in `lib/auriva-catalog.ts`.                                             |
 | Backend decisions | Guest checkout, shipping and tax, content management, emails, order ids (the decisions table in `backend-handoff.md`).                                                                                                          | Adjust `types.ts`, the handoff doc and the UI as each is decided.                                                                        |
+| Bulk & gifting    | Check the copy in the contact page's new section: it offers gift notes, custom packaging and pricing for larger quantities, and promises a reply within two working days. Change anything you can't offer.                      | Edit `OFFER` and the intro in `routes/contact.tsx`. The backend delivers `POST /enquiries/bulk` to the studio inbox.                     |
 
 ## Not built yet
 
@@ -44,7 +45,7 @@ data (not the types) from `lib/auriva-catalog.ts` and `lib/auriva-journal.ts`.
 
 ## Optional clean-ups
 
-- Fix the 7 Prettier errors with `npx eslint . --fix` and `npx prettier --write src/styles.css`.
+- Fix the 6 Prettier errors with `npx eslint . --fix` and `npx prettier --write src/styles.css`.
 - Replace `@lovable.dev/vite-tanstack-config` with an explicit Vite config if it ever gets in the
   way. It's the build setup and works without Lovable.
 

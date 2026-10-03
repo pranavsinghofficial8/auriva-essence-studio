@@ -137,7 +137,15 @@ right frame instead of sliding into place.
 - **Post** (`/journal/$slug`): title, intro and sections, a shop link, a "what moment do you
   return to?" form (`POST /journal/stories` with the post's slug) and "keep reading" posts.
 - **Contact** (`/contact`): name, email, subject and message (`POST /contact`), then a
-  thank-you.
+  thank-you. Under the intro, "bulk & gifting enquiries →" scrolls to the section below.
+- **Bulk & gifting** (`/contact#bulk`, also linked from the footer): what Auriva offers in
+  quantity (assortments, gift notes or packaging, pricing), then an enquiry form: name,
+  organisation (optional), email, Indian mobile, what it's for (corporate gifting, wedding or
+  celebration, hotel/spa/studio, retail or stockist, something else), quantity in boxes (25–50
+  up to 500+), collections (toggle chips; none means "help me choose"), needed-by date
+  (optional, not in the past), delivery city, a gift notes / custom packaging checkbox and an
+  optional message. Validated in the browser (the first problem field gets focus), sent as
+  `POST /enquiries/bulk` ("sending…"), then "thank you, {first name}".
 
 ## Errors
 

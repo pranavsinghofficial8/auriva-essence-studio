@@ -11,6 +11,7 @@ import { orNull, request, usingMockApi } from "./client";
 import * as mock from "./mock";
 import type {
   Address,
+  BulkEnquiry,
   Cart,
   Category,
   CategoryPage,
@@ -145,6 +146,12 @@ export const sendContactMessage = (message: ContactMessage): Promise<void> =>
   usingMockApi
     ? mock.sendContactMessage(message)
     : request("/contact", { method: "POST", body: message });
+
+/** POST /enquiries/bulk: a bulk or gifting enquiry from the contact page. */
+export const sendBulkEnquiry = (enquiry: BulkEnquiry): Promise<void> =>
+  usingMockApi
+    ? mock.sendBulkEnquiry(enquiry)
+    : request("/enquiries/bulk", { method: "POST", body: enquiry });
 
 /** POST /journal/stories: a reader's "share your ritual" submission. */
 export const shareRitualStory = (story: RitualStory): Promise<void> =>

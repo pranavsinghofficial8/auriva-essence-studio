@@ -6,6 +6,7 @@ import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
 import { ApiError, errorMessage, usingMockApi, type Address, type Order } from "@/lib/api";
 import { useCart, useConfirmPayment, usePlaceOrder, useUser } from "@/lib/api/hooks";
+import { indianMobile } from "@/lib/validation";
 import { PaymentNotCompleted, payWithRazorpay, razorpayKeyId } from "@/lib/razorpay";
 
 export const Route = createFileRoute("/checkout")({
@@ -67,10 +68,7 @@ const INDIAN_STATES = [
 /** Delivery address rules. The backend re-validates; see docs/backend-handoff.md. */
 const addressSchema = z.object({
   fullName: z.string().trim().min(2, "Enter the recipient's full name"),
-  phone: z
-    .string()
-    .transform((v) => v.replace(/[\s-]/g, ""))
-    .pipe(z.string().regex(/^(\+91)?[6-9]\d{9}$/, "Enter a 10-digit Indian mobile number")),
+  phone: indianMobile,
   line1: z.string().trim().min(5, "Enter the house number and street"),
   line2: z.string().trim(),
   city: z.string().trim().min(2, "Enter the city"),

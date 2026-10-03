@@ -2,6 +2,16 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: bulk & gifting enquiries
+
+- The contact page has a new **bulk & gifting** section (`/contact#bulk`) for corporate gifts,
+  weddings, hotels, spas and stockists: three lines on what Auriva offers in quantity, and an
+  enquiry form (who, what it's for, how many boxes, which collections, when, where, packaging,
+  notes). It's linked from the top of the contact page and from the footer.
+- Sent as `POST /enquiries/bulk` (shape in `backend-handoff.md`); the mock accepts it.
+- The Indian mobile rule moved to `lib/validation.ts`, shared with checkout. Running Prettier on
+  the footer fixed one of the old lint errors (6 remain).
+
 ## 2026-10-03: homepage quote replays
 
 - The homepage quote ("at auriva, we renew flowers into incense…") now unfurls every time the

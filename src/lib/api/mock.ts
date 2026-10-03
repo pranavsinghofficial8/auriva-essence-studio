@@ -15,6 +15,7 @@ import { razorpayKeyId } from "@/lib/razorpay";
 import { ApiError } from "./client";
 import type {
   Address,
+  BulkEnquiry,
   Cart,
   CategoryPage,
   ContactMessage,
@@ -275,6 +276,10 @@ export async function getOrder(id: string): Promise<Order> {
 
 export async function sendContactMessage(_message: ContactMessage): Promise<void> {
   await settle(500);
+}
+
+export async function sendBulkEnquiry(_enquiry: BulkEnquiry): Promise<void> {
+  await settle(600);
 }
 
 export async function shareRitualStory(_story: RitualStory): Promise<void> {

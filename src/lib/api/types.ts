@@ -6,7 +6,7 @@
 export type { AuraName, Category, CategorySlug, Product } from "@/lib/auriva-catalog";
 export type { JournalPost } from "@/lib/auriva-journal";
 
-import type { Category, Product } from "@/lib/auriva-catalog";
+import type { Category, CategorySlug, Product } from "@/lib/auriva-catalog";
 import type { JournalPost } from "@/lib/auriva-journal";
 
 export type User = {
@@ -88,3 +88,26 @@ export type SignInInput = { email: string; password: string };
 export type SignUpInput = { name: string; email: string; password: string };
 export type ContactMessage = { name: string; email: string; subject: string; message: string };
 export type RitualStory = { name: string; story: string; postSlug?: string };
+
+export type BulkEnquiryKind = "corporate" | "celebration" | "hospitality" | "retail" | "other";
+export type BulkQuantity = "25-50" | "50-100" | "100-250" | "250-500" | "500+";
+
+/** A bulk or gifting enquiry from the contact page (`POST /enquiries/bulk`). */
+export type BulkEnquiry = {
+  name: string;
+  organisation?: string;
+  email: string;
+  /** Indian mobile, spaces and hyphens stripped. */
+  phone: string;
+  kind: BulkEnquiryKind;
+  /** Approximate number of boxes. */
+  quantity: BulkQuantity;
+  /** Collections they're interested in; empty means "help me choose". */
+  collections: CategorySlug[];
+  /** `YYYY-MM-DD`. */
+  neededBy?: string;
+  city: string;
+  /** Wants gift notes or custom packaging. */
+  customPackaging: boolean;
+  message?: string;
+};

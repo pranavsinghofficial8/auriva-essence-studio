@@ -48,11 +48,15 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link to="/contact" hash="bulk" className="hover:opacity-60">
+                  Bulk &amp; Gifting
+                </Link>
+              </li>
+              <li>
                 <Link to="/auth" className="hover:opacity-60">
                   Sign In
                 </Link>
               </li>
-
             </ul>
           </div>
         </div>
