@@ -76,8 +76,10 @@ marks the order paid, empties the bag and shows the confirmation.
   pop-up, so allow pop-ups for the site) with **Success** and **Failure** buttons.
 - **Cards:** use the test card numbers from Razorpay's docs ("Test cards"), any future expiry
   and any CVV.
-- **UPI** doesn't appear in test mode while the mock opens the window without a Razorpay order;
-  it should once the backend creates real orders.
+- **UPI** is switched off on the Razorpay account itself, not by the site: on 2026-10-03
+  Razorpay reported the account as not yet activated, with UPI disabled. It should appear once
+  KYC is approved and the account is activated; if not, ask Razorpay support to enable UPI. On
+  phones UPI shows as "pay with an app"; on computers as a QR code or UPI id.
 - **Mobile number:** Razorpay rejects obviously made-up numbers such as 9876543210 (it then
   leaves the field empty). Its own example, 9000090000, works.
 - Claude Code's built-in preview browser blocks the bank pop-up, so finish a payment in a normal
