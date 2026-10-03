@@ -335,32 +335,27 @@ be in place before launch.
 | ------ | ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------- |
 | POST   | `/contact`         | `{ name, email, subject, message }` | Deliver to the studio inbox (e.g. hello@auriva.in); 204                               |
 | POST   | `/journal/stories` | `{ name, story, postSlug? }`        | A reader's "share your ritual" note; `postSlug` is set when sent from an article; 204 |
-| POST   | `/enquiries/bulk`  | `BulkEnquiry` (below)               | A bulk or gifting enquiry from `/contact#bulk`. Deliver to the studio inbox; 204      |
+| POST   | `/enquiries/bulk`  | `BulkEnquiry` (below)               | A bulk or gifting enquiry from the contact form. Deliver to the studio inbox; 204     |
 
 `BulkEnquiry`:
 
 ```json
 {
   "name": "Ananya Rao",
-  "organisation": "Lakeside Studio",
   "email": "ananya@example.com",
   "phone": "9876543210",
   "kind": "corporate",
   "quantity": "100-250",
-  "collections": ["incense-sticks", "incense-cones"],
   "neededBy": "2026-11-01",
-  "city": "Kolkata",
-  "customPackaging": true,
-  "message": "Diwali gifts for our team."
+  "message": "Diwali gifts for our team: sticks and cones, gift notes, delivery to Kolkata."
 }
 ```
 
 - `kind` is one of `corporate`, `celebration`, `hospitality`, `retail` and `other`.
 - `quantity` (boxes) is one of `25-50`, `50-100`, `100-250`, `250-500` and `500+`.
-- `collections` holds category slugs; an empty list means "help me choose".
-- `organisation`, `neededBy` (`YYYY-MM-DD`, not in the past) and `message` (up to 2,000
-  characters) are optional and omitted when empty. `name` and `city` are at least 2
-  characters; `phone` follows the Address rules.
+- `neededBy` (`YYYY-MM-DD`, not in the past) and `message` (up to 2,000 characters; where
+  visitors mention collections, packaging, delivery city or budget) are optional and omitted
+  when empty. `name` is at least 2 characters; `phone` follows the Address rules.
 - Return 422 with `fields` (keyed as above) for bad input; the form shows them under each field.
 
 Add spam protection (rate limits, a honeypot or a CAPTCHA) as you see fit; the frontend shows

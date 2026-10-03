@@ -2,6 +2,19 @@
 
 Newest first. Each entry says what changed and why.
 
+## 2026-10-03: one contact form
+
+- The separate bulk & gifting section made the contact page feel long and repetitive, so the
+  two forms are now one, with a switch at the top: "a note" (the default, as before) or "bulk &
+  gifting". Name and email are shared, and what's typed carries across a switch.
+- The bulk form went from 11 fields to 7: organisation, collections, delivery city and the
+  packaging tick box were dropped (the note's hint asks for them instead). `BulkEnquiry` lost
+  those fields.
+- `/contact#bulk` (the footer link) opens the form on bulk and scrolls to it. The "bulk &
+  gifting enquiries →" link under the intro is gone; the intro mentions gifting instead.
+- The general form now validates like the others (messages under each field) instead of using
+  the browser's pop-ups.
+
 ## 2026-10-03: bulk & gifting enquiries
 
 - The contact page has a new **bulk & gifting** section (`/contact#bulk`) for corporate gifts,
