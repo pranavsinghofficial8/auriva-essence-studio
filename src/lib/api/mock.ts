@@ -11,6 +11,13 @@ import { categories, getCategory, getProduct, products, productsIn } from "@/lib
 import { getJournalPost, journalPosts } from "@/lib/auriva-journal";
 import { forgetGoogleSession, readGoogleCredential } from "@/lib/google-auth";
 import { razorpayKeyId } from "@/lib/razorpay";
+import ritualStillness from "@/assets/ritual-stillness.jpg";
+import ritualClarity from "@/assets/ritual-clarity.jpg";
+import ritualGrounding from "@/assets/ritual-grounding.jpg";
+import ritualComfort from "@/assets/ritual-comfort.jpg";
+import gridEmber from "@/assets/grid-ember.jpg";
+import gridSmoke from "@/assets/grid-smoke.jpg";
+import gridAsh from "@/assets/grid-ash.jpg";
 
 import { ApiError } from "./client";
 import { searchCatalog } from "./mock-search";
@@ -20,6 +27,7 @@ import type {
   Cart,
   CategoryPage,
   ContactMessage,
+  HomeContent,
   JournalPostPage,
   Order,
   PaymentResult,
@@ -88,6 +96,54 @@ export async function getProductPage(slug: string): Promise<ProductPage> {
   if (!product || !category) throw notFound("Product");
   const related = products.filter((p) => p.slug !== product.slug).slice(0, 4);
   return { product, category, related };
+}
+
+/** The homepage's catalog content, as `GET /home` would return it. */
+export async function getHome(): Promise<HomeContent> {
+  const card = (slug: string) => categories.find((c) => c.slug === slug)?.card ?? "";
+  return {
+    collections: categories,
+    bestsellers: await getProducts({ featured: "bestseller" }),
+    rituals: [
+      {
+        title: "stillness",
+        subtitle: "a quieter mind",
+        body: "lit at dusk, when the day finally stops asking for anything.",
+        image: ritualStillness,
+        productSlug: "vanilla-amber",
+      },
+      {
+        title: "clarity",
+        subtitle: "space to think",
+        body: "a clean, bright drift that makes room at the edges of thought.",
+        image: ritualClarity,
+        productSlug: "lemongrass-citronella",
+      },
+      {
+        title: "grounding",
+        subtitle: "a steady rhythm",
+        body: "earth, root and resin — a return to the weight of the body.",
+        image: ritualGrounding,
+        productSlug: "nagchampa",
+      },
+      {
+        title: "comfort",
+        subtitle: "ease, restored",
+        body: "soft, warm and familiar. the scent of being home again.",
+        image: ritualComfort,
+        productSlug: "rose-amber",
+      },
+    ],
+    instaTiles: [
+      gridEmber,
+      gridSmoke,
+      gridAsh,
+      card("incense-cones"),
+      ritualComfort,
+      card("incense-sticks"),
+    ].map((image) => ({ image, alt: "Auriva ritual moment" })),
+    instagramHandle: "auriva",
+  };
 }
 
 /* ---------------------------------- search ---------------------------------- */

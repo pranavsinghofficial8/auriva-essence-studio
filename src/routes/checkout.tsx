@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
-import { ApiError, errorMessage, usingMockApi, type Address, type Order } from "@/lib/api";
+import { ApiError, errorMessage, live, type Address, type Order } from "@/lib/api";
 import { useCart, useConfirmPayment, usePlaceOrder, useUser } from "@/lib/api/hooks";
 import { indianMobile } from "@/lib/validation";
 import { PaymentNotCompleted, payWithRazorpay, razorpayKeyId } from "@/lib/razorpay";
@@ -82,7 +82,7 @@ const addressSchema = z.object({
 type AddressField = keyof z.input<typeof addressSchema>;
 
 /** The real backend always takes payment; the mock does once it has a Razorpay test key. */
-const takesPayment = !usingMockApi || !!razorpayKeyId;
+const takesPayment = live("orders") || !!razorpayKeyId;
 
 /** Shown when Razorpay took the money but we couldn't confirm it with the backend. */
 function confirmErrorMessage(error: unknown) {
@@ -305,7 +305,7 @@ function CheckoutPage() {
                       Pay securely with Razorpay: UPI, cards, net banking or wallets. Your bag is
                       kept until the payment goes through.
                     </p>
-                    {usingMockApi ? (
+                    {!live("orders") ? (
                       <p className="mt-3 text-[14px] leading-[1.8] text-muted-foreground">
                         Razorpay test mode: no real money moves. Netbanking lets you pick success or
                         failure.

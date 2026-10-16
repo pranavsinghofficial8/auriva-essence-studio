@@ -1,0 +1,2959 @@
+openapi: 3.1.0
+info:
+  title: Auriva Platform API
+  version: 0.3.0-draft
+  description: |
+    Contract-first API for the Auriva storefront and admin panel (DECISIONS D-052).
+    Draft for sign-off together with HLD-v2.md. The coding agent implements this spec;
+    both frontends generate typed clients from it.
+
+    Conventions (HLD-v2 §4):
+    - JSON, camelCase. IDs are UUID strings. Public resources are addressed by slug.
+    - Money is integer paise; every money field ends in `Paise`.
+    - Timestamps are ISO-8601 UTC.
+    - Lists are offset-paginated (`page`, `size`) → `{items, page, size, totalItems, totalPages}`.
+    - Errors use the `Error` envelope with a stable `code`.
+
+    Sessions (D-080): opaque server-side sessions in httpOnly cookies, no JWTs, no refresh.
+    Customer cookie `__Secure-auriva_session` is scoped to `<domain>`; admin cookie
+    `__Host-auriva_admin` is host-only on `api.<domain>`. Auth must pass AUTH-SECURITY-GATE.md (D-081).
+    Auth and `/me*` responses carry `Cache-Control: no-store`. **Every state-changing request (POST/PUT/PATCH/DELETE)
+    must send `X-Auriva-Client`** and come from an allowlisted Origin, except payment webhooks.
+    No rate limiting in v1 (D-061).
+servers:
+  - url: https://api.{domain}/v1
+    variables:
+      domain:
+        default: example.com
+        description: The brand's custom domain (A-1, not yet provided)
+  - url: http://localhost:4000/v1
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Me
+  - name: Catalog
+  - name: Reviews
+  - name: Home
+  - name: Journal
+  - name: Forms
+  - name: Store
+  - name: Cart
+  - name: Checkout
+  - name: Orders
+  - name: Payments
+  - name: Admin · Auth
+  - name: Admin · Catalog
+  - name: Admin · Home
+  - name: Admin · Journal
+  - name: Admin · Orders
+  - name: Admin · Coupons
+  - name: Admin · Reviews
+  - name: Admin · Stories
+  - name: Admin · Media
+  - name: Admin · Settings
+  - name: Admin · Admins
+  - name: Admin · Customers
+  - name: Admin · Dashboard
+  - name: Health
+
+paths:
+  # ───────────────────────────── Auth (customer) ─────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      summary: Create a customer account (email + password) and start a session
+      description: An existing email returns 409 EMAIL_TAKEN (D-083, accepted enumeration trade-off).
+      description: When `emailVerificationEnabled` is on, a verification email is sent (D-027).
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Account created; session cookies set
+          headers: { Set-Cookie: { $ref: '#/components/headers/SetSessionCookies' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422':
+          description: VALIDATION_FAILED or PASSWORD_BREACHED (found in known breach lists)
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      summary: Customer login. Always issues a NEW session ID (no fixation)
+      description: Unknown email, wrong password and deactivated account all return 401 INVALID_CREDENTIALS with equal timing.
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Session cookies set
+          headers: { Set-Cookie: { $ref: '#/components/headers/SetSessionCookies' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      summary: End this session (row deleted) and clear the cookie
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '204': { description: Logged out }
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      operationId: logoutAll
+      summary: End every session of this user, including this one
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '204': { description: All sessions revoked }
+  /auth/verify-email:
+    post:
+      tags: [Auth]
+      operationId: verifyEmail
+      summary: Confirm email ownership with the emailed token
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenRequest' }
+      responses:
+        '204': { description: Email verified }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/FeatureDisabled' }
+  /auth/verify-email/resend:
+    post:
+      tags: [Auth]
+      operationId: resendVerificationEmail
+      summary: Resend the verification email (only when the flag is on)
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '204': { description: Sent (or already verified) }
+        '403': { $ref: '#/components/responses/FeatureDisabled' }
+  /auth/password/forgot:
+    post:
+      tags: [Auth]
+      operationId: forgotPassword
+      summary: Send a password-reset email
+      description: Always returns 204, even for unknown emails (no account enumeration). Works regardless of the verification flag.
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '204': { description: Accepted }
+  /auth/password/reset:
+    post:
+      tags: [Auth]
+      operationId: resetPassword
+      summary: Set a new password with the emailed token (also marks the email verified)
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, newPassword]
+              properties:
+                token: { type: string }
+                newPassword: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '204': { description: Password changed; all sessions revoked }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /auth/confirm-email-change:
+    post:
+      tags: [Auth]
+      operationId: confirmEmailChange
+      summary: Confirm a pending email change with the token sent to the new address
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenRequest' }
+      responses:
+        '204': { description: Email changed and verified }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ───────────────────────────── Health ─────────────────────────────
+  /health:
+    get:
+      tags: [Health]
+      operationId: getHealth
+      summary: Liveness + DB reachability for Render health checks (review C6). Not logged.
+      responses:
+        '200':
+          description: Up
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, db]
+                properties:
+                  status: { type: string, enum: [ok] }
+                  db: { type: string, enum: [ok] }
+        '503': { description: DB unreachable }
+
+  # ───────────────────────────── Me ─────────────────────────────
+  /me/password:
+    post:
+      tags: [Me]
+      operationId: changeMyPassword
+      summary: Change password while logged in; ends all other sessions (review A4)
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '204': { description: Changed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /me:
+    get:
+      tags: [Me]
+      operationId: getMe
+      summary: Current customer profile (plus last shipping address for checkout pre-fill, D-046)
+      security: [{ customerSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Me]
+      operationId: updateMe
+      summary: Update name / phone
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                phone: { $ref: '#/components/schemas/Phone' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /me/email:
+    post:
+      tags: [Me]
+      operationId: requestEmailChange
+      summary: Start an email change (confirmation sent to the new address)
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newEmail, currentPassword]
+              properties:
+                newEmail: { type: string, format: email }
+                currentPassword: { type: string }
+      responses:
+        '204': { description: Confirmation email sent }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /me/sessions:
+    get:
+      tags: [Me]
+      operationId: listMySessions
+      summary: Active sessions (device, approximate location, last used)
+      security: [{ customerSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SessionInfo' }
+  /me/sessions/{sessionId}:
+    delete:
+      tags: [Me]
+      operationId: revokeMySession
+      summary: Revoke one of your own sessions (someone else's → 404)
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /me/orders:
+    get:
+      tags: [Me, Orders]
+      operationId: listMyOrders
+      summary: The customer's orders, newest first (PENDING/FAILED/EXPIRED excluded unless includeUnpaid=true)
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - name: includeUnpaid
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderSummaryPage' }
+
+  # ───────────────────────────── Catalog ─────────────────────────────
+  /categories:
+    get:
+      tags: [Catalog]
+      operationId: listCategories
+      summary: Active categories by position
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+  /categories/{categorySlug}:
+    get:
+      tags: [Catalog]
+      operationId: getCategory
+      summary: One category with its active products (category page; O4)
+      parameters: [{ $ref: '#/components/parameters/CategorySlug' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /products:
+    get:
+      tags: [Catalog]
+      operationId: listProducts
+      summary: Active products, optionally by category
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductCardPage' }
+  /products/{productSlug}:
+    get:
+      tags: [Catalog]
+      operationId: getProduct
+      summary: Product detail page, including up to 4 related products (D-039)
+      parameters: [{ $ref: '#/components/parameters/ProductSlug' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────────── Reviews ─────────────────────────────
+  /products/{productSlug}/reviews:
+    get:
+      tags: [Reviews]
+      operationId: listProductReviews
+      summary: Visible reviews, newest first
+      parameters:
+        - $ref: '#/components/parameters/ProductSlug'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Reviews]
+      operationId: createReview
+      summary: Review a product (requires a DELIVERED order containing it; one per user per product)
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ProductSlug'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReviewRequest' }
+      responses:
+        '201':
+          description: Created (visible immediately, D-028)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Review' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /products/{productSlug}/reviews/eligibility:
+    get:
+      tags: [Reviews]
+      operationId: getReviewEligibility
+      summary: Whether the signed-in customer can review this product
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ProductSlug' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [canReview]
+                properties:
+                  canReview: { type: boolean }
+                  reason:
+                    type: string
+                    enum: [ELIGIBLE, NOT_PURCHASED, NOT_DELIVERED, ALREADY_REVIEWED]
+  /reviews/{reviewId}:
+    delete:
+      tags: [Reviews]
+      operationId: deleteMyReview
+      summary: Delete own review (can then post again)
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ReviewId'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────────── Home, journal, forms, store ─────────────────────────────
+  /home:
+    get:
+      tags: [Home]
+      operationId: getHome
+      summary: Everything the homepage needs in one call (SSR-friendly)
+      description: Consolidates the earlier per-module endpoints (/home/highlights, /home/most-reordered, /home/rituals, /home/insta).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Home' }
+  /blog-categories:
+    get:
+      tags: [Journal]
+      operationId: listBlogCategories
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BlogCategory' }
+  /blogs:
+    get:
+      tags: [Journal]
+      operationId: listBlogs
+      summary: Published posts by position
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogCardPage' }
+  /blogs/{blogSlug}:
+    get:
+      tags: [Journal]
+      operationId: getBlog
+      parameters: [{ $ref: '#/components/parameters/BlogSlug' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /contact:
+    post:
+      tags: [Forms]
+      operationId: submitContact
+      summary: Forward a contact message to the owner's inbox; nothing stored (D-033)
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, subject, message]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                email: { type: string, format: email }
+                subject: { type: string, minLength: 1, maxLength: 200 }
+                message: { type: string, minLength: 1, maxLength: 5000 }
+      responses:
+        '202': { description: Accepted for sending }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /ritual-stories:
+    post:
+      tags: [Forms]
+      operationId: submitRitualStory
+      summary: Store a "share your ritual" submission for moderation (D-036)
+      description: Signed-in users are linked automatically if a session cookie is present.
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, story]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                story: { type: string, minLength: 1, maxLength: 2000 }
+                sourcePostSlug: { type: string }
+      responses:
+        '202': { description: Received }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /store/public-settings:
+    get:
+      tags: [Store]
+      operationId: getPublicSettings
+      summary: Settings the storefront needs to render (shipping line, Instagram, verification UI)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicSettings' }
+
+  # ───────────────────────────── Cart ─────────────────────────────
+  /cart:
+    get:
+      tags: [Cart]
+      operationId: getCart
+      summary: Cart with lines, computed totals and stock warnings
+      security: [{ customerSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Cart]
+      operationId: clearCart
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '200':
+          description: Emptied
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+  /cart/items:
+    post:
+      tags: [Cart]
+      operationId: addCartItem
+      summary: Add a product (adding an existing product increments its quantity)
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productSlug]
+              properties:
+                productSlug: { type: string }
+                quantity: { type: integer, minimum: 1, maximum: 20, default: 1 }
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/OutOfStock' }
+  /cart/items/{cartItemId}:
+    patch:
+      tags: [Cart]
+      operationId: updateCartItem
+      summary: Set quantity (0 removes the line)
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CartItemId'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 0, maximum: 20 }
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/OutOfStock' }
+    delete:
+      tags: [Cart]
+      operationId: removeCartItem
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/CartItemId'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+  /cart/coupon:
+    put:
+      tags: [Cart]
+      operationId: applyCoupon
+      summary: Apply a coupon (preview; binding validation happens at checkout)
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, minLength: 1, maxLength: 40 }
+      responses:
+        '200':
+          description: Cart with discount applied
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '422':
+          description: Coupon rejected. Code is one of COUPON_INVALID (unknown, scheduled or disabled; deliberately not distinguished, review A5), COUPON_EXPIRED, COUPON_MIN_ORDER_NOT_MET, COUPON_ALREADY_USED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [Cart]
+      operationId: removeCoupon
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '200':
+          description: Cart without coupon
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+
+  # ───────────────────────────── Checkout, orders, payments ─────────────────────────────
+  /checkout:
+    post:
+      tags: [Checkout]
+      operationId: startCheckout
+      summary: Create a PENDING_PAYMENT order, reserve stock, start a payment session
+      description: |
+        Transaction, then the gateway call outside it (CHECKOUT-AND-ORDERS §4).
+        If this user already has a PENDING_PAYMENT order: an unchanged cart returns that order and
+        its payment session (200); a changed cart returns 409 CHECKOUT_IN_PROGRESS (use
+        POST /checkout/pending/cancel to start again). The discount is capped so total ≥ ₹1.
+        Requires a verified email when `emailVerificationEnabled` is on.
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/ClientHeader'
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: Client-generated UUID, scoped to the calling user and kept 24 h. Same user + key returns the same order; same key with a different payload → 422 IDEMPOTENCY_KEY_REUSED (review A6).
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shippingAddress]
+              properties:
+                shippingAddress: { $ref: '#/components/schemas/ShippingAddress' }
+      responses:
+        '201':
+          description: Order created; hand `payment.clientPayload` to the gateway's checkout widget
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckoutResponse' }
+        '200':
+          description: Existing pending order returned (same cart, or same idempotency key)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckoutResponse' }
+        '403':
+          description: EMAIL_NOT_VERIFIED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '409':
+          description: OUT_OF_STOCK (details list the lines), CART_EMPTY, PRODUCT_UNAVAILABLE, CHECKOUT_IN_PROGRESS
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422':
+          description: Validation error or coupon no longer valid
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /checkout/pending/cancel:
+    post:
+      tags: [Checkout]
+      operationId: cancelPendingCheckout
+      summary: Abandon the in-progress checkout so a new one can start (review B4)
+      description: Expires the user's PENDING_PAYMENT order, releases its stock and coupon claim, and voids the gateway session where supported. No-op if none.
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '204': { description: Cancelled (or nothing pending) }
+  /orders/{orderId}:
+    get:
+      tags: [Orders]
+      operationId: getMyOrder
+      summary: Own order detail (poll after payment until PLACED / PAYMENT_FAILED / EXPIRED)
+      description: May pull payment status from the gateway as a fallback when the webhook is late.
+      security: [{ customerSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/OrderId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /payments/webhooks/{provider}:
+    post:
+      tags: [Payments]
+      operationId: receivePaymentWebhook
+      summary: Gateway webhook (signature-verified, idempotent, amount-checked)
+      description: |
+        Exempt from session, Origin and X-Auriva-Client checks. Body is provider-specific and read raw for signature verification.
+        The order is found ONLY via the stored provider_order_id (never an id in the payload); amount and currency are checked (review A2).
+        `fake` is not registered in production: /payments/webhooks/fake returns 404 there (review A1).
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PaymentProvider' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200': { description: Processed or duplicate (no-op) }
+        '400': { description: Signature invalid }
+  /payments/fake/{orderId}/complete:
+    post:
+      tags: [Payments]
+      operationId: completeFakePayment
+      summary: DEV ONLY — simulate the fake provider's webhook (success or failure)
+      description: Not registered in production builds (D-020).
+      x-environments: [local]
+      security: [{ customerSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              properties:
+                outcome: { type: string, enum: [SUCCESS, FAILURE] }
+      responses:
+        '204': { description: Simulated }
+
+  # ───────────────────────────── Admin · Auth ─────────────────────────────
+  /admin/auth/login:
+    post:
+      tags: [Admin · Auth]
+      operationId: adminLogin
+      summary: Admin login (separate `__Host-auriva_admin` cookie; new session ID; all admins emailed on a new-device sign-in)
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Admin session cookies set
+          headers: { Set-Cookie: { $ref: '#/components/headers/SetAdminSessionCookies' } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /admin/auth/reauth:
+    post:
+      tags: [Admin · Auth]
+      operationId: adminReauthenticate
+      summary: Step-up re-authentication; unlocks sensitive admin actions for 10 minutes
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        '204': { description: Re-authenticated }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /admin/auth/logout-all:
+    post:
+      tags: [Admin · Auth]
+      operationId: adminLogoutAll
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '204': { description: All admin sessions of this admin revoked }
+  /admin/me/sessions:
+    get:
+      tags: [Admin · Auth]
+      operationId: adminListMySessions
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SessionInfo' }
+  /admin/me/sessions/{sessionId}:
+    delete:
+      tags: [Admin · Auth]
+      operationId: adminRevokeMySession
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Revoked }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/auth/logout:
+    post:
+      tags: [Admin · Auth]
+      operationId: adminLogout
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      responses:
+        '204': { description: Logged out }
+  /admin/me:
+    get:
+      tags: [Admin · Auth]
+      operationId: adminGetMe
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /admin/me/password:
+    post:
+      tags: [Admin · Auth]
+      operationId: adminChangeMyPassword
+      x-requires-reauth: true
+      summary: Change own admin password (≥ 12 chars); ends other admin sessions (review A4)
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangePasswordRequest' }
+      responses:
+        '204': { description: Changed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/ReauthRequired' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  # ───────────────────────────── Admin · Dashboard & customers ─────────────────────────────
+  /admin/dashboard:
+    get:
+      tags: [Admin · Dashboard]
+      operationId: adminGetDashboard
+      summary: The owner's first screen (review D1)
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminDashboard' }
+  /admin/customers:
+    get:
+      tags: [Admin · Customers]
+      operationId: adminListCustomers
+      summary: Customers, newest first; search by name or email (review D3)
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCustomerPage' }
+  /admin/customers/{id}:
+    patch:
+      tags: [Admin · Customers]
+      operationId: adminUpdateCustomer
+      summary: Deactivate or reactivate a customer. Deactivation blocks login and ends their sessions.
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [active]
+              properties:
+                active: { type: boolean }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCustomer' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ───────────────────────────── Admin · Catalog ─────────────────────────────
+  /admin/categories:
+    get:
+      tags: [Admin · Catalog]
+      operationId: adminListCategories
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: All categories incl. inactive
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminCategory' }
+    post:
+      tags: [Admin · Catalog]
+      operationId: adminCreateCategory
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCategoryInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCategory' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/categories/order:
+    put:
+      tags: [Admin · Catalog]
+      operationId: adminReorderCategories
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IdOrder' }
+      responses:
+        '204': { description: Reordered }
+  /admin/categories/{id}:
+    patch:
+      tags: [Admin · Catalog]
+      operationId: adminUpdateCategory
+      summary: Update fields. Slug can change only while the category has never been active (409 SLUG_LOCKED, review B11). Deactivating hides its products (review B10)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCategoryPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCategory' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/products:
+    get:
+      tags: [Admin · Catalog]
+      operationId: adminListProducts
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: active
+          in: query
+          schema: { type: boolean }
+        - name: q
+          in: query
+          description: Name or slug contains (review D7)
+          schema: { type: string }
+        - name: lowStock
+          in: query
+          description: Only products with stockQuantity at or below this number
+          schema: { type: integer, minimum: 0 }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminProductPage' }
+    post:
+      tags: [Admin · Catalog]
+      operationId: adminCreateProduct
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminProductInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminProduct' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/products/{id}:
+    get:
+      tags: [Admin · Catalog]
+      operationId: adminGetProduct
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminProduct' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Admin · Catalog]
+      operationId: adminUpdateProduct
+      summary: Update fields, images (full ordered list), active (deactivate = soft delete). Stock is changed only via stock-adjustments; slug only while never active (409 SLUG_LOCKED)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminProductPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminProduct' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/products/{id}/stock-adjustments:
+    get:
+      tags: [Admin · Catalog]
+      operationId: adminListStockAdjustments
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockAdjustmentPage' }
+    post:
+      tags: [Admin · Catalog]
+      operationId: adminAdjustStock
+      summary: Add or remove stock by a signed amount, with a reason (review B9)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delta, reason]
+              properties:
+                delta: { type: integer, minimum: -10000, maximum: 10000, not: { const: 0 } }
+                reason: { type: string, minLength: 3, maxLength: 200, examples: ['New batch received', 'Damaged in storage'] }
+      responses:
+        '200':
+          description: Updated product
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminProduct' }
+        '409':
+          description: STOCK_WOULD_GO_NEGATIVE
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /admin/products/{id}/related:
+    put:
+      tags: [Admin · Catalog]
+      operationId: adminSetRelatedProducts
+      summary: Replace the curated related list (ordered, max 8 stored, 4 shown)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productIds]
+              properties:
+                productIds:
+                  type: array
+                  maxItems: 8
+                  uniqueItems: true
+                  items: { type: string, format: uuid }
+      responses:
+        '204': { description: Saved }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  # ───────────────────────────── Admin · Home ─────────────────────────────
+  /admin/home/most-reordered:
+    get:
+      tags: [Admin · Home]
+      operationId: adminGetMostReordered
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: Ordered product ids
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IdOrder' }
+    put:
+      tags: [Admin · Home]
+      operationId: adminSetMostReordered
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IdOrder' }
+      responses:
+        '204': { description: Saved }
+  /admin/home/ritual-cards:
+    get:
+      tags: [Admin · Home]
+      operationId: adminListRitualCards
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminRitualCard' }
+    post:
+      tags: [Admin · Home]
+      operationId: adminCreateRitualCard
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminRitualCardInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminRitualCard' }
+  /admin/home/ritual-cards/{id}:
+    patch:
+      tags: [Admin · Home]
+      operationId: adminUpdateRitualCard
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminRitualCardPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminRitualCard' }
+    delete:
+      tags: [Admin · Home]
+      operationId: adminDeleteRitualCard
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Deleted }
+  /admin/home/insta-tiles:
+    get:
+      tags: [Admin · Home]
+      operationId: adminListInstaTiles
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminInstaTile' }
+    post:
+      tags: [Admin · Home]
+      operationId: adminCreateInstaTile
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminInstaTileInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminInstaTile' }
+  /admin/home/insta-tiles/{id}:
+    patch:
+      tags: [Admin · Home]
+      operationId: adminUpdateInstaTile
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminInstaTilePatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminInstaTile' }
+    delete:
+      tags: [Admin · Home]
+      operationId: adminDeleteInstaTile
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Deleted }
+
+  # ───────────────────────────── Admin · Journal ─────────────────────────────
+  /admin/blog-categories:
+    get:
+      tags: [Admin · Journal]
+      operationId: adminListBlogCategories
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BlogCategory' }
+    post:
+      tags: [Admin · Journal]
+      operationId: adminCreateBlogCategory
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlogCategoryInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogCategory' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/blog-categories/{id}:
+    patch:
+      tags: [Admin · Journal]
+      operationId: adminUpdateBlogCategory
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BlogCategoryPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BlogCategory' }
+    delete:
+      tags: [Admin · Journal]
+      operationId: adminDeleteBlogCategory
+      summary: Only allowed when no posts use it
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Deleted }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/blogs:
+    get:
+      tags: [Admin · Journal]
+      operationId: adminListBlogs
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/BlogStatus' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBlogPage' }
+    post:
+      tags: [Admin · Journal]
+      operationId: adminCreateBlog
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminBlogInput' }
+      responses:
+        '201':
+          description: Created (DRAFT unless status given)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBlog' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/blogs/order:
+    put:
+      tags: [Admin · Journal]
+      operationId: adminReorderBlogs
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IdOrder' }
+      responses:
+        '204': { description: Reordered }
+  /admin/blogs/{id}:
+    get:
+      tags: [Admin · Journal]
+      operationId: adminGetBlog
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBlog' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Admin · Journal]
+      operationId: adminUpdateBlog
+      summary: Update fields or publish/unpublish (status). Slug is locked once the post has been published (409 SLUG_LOCKED)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminBlogPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminBlog' }
+    delete:
+      tags: [Admin · Journal]
+      operationId: adminDeleteBlog
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Deleted }
+
+  # ───────────────────────────── Admin · Orders ─────────────────────────────
+  /admin/orders:
+    get:
+      tags: [Admin · Orders]
+      operationId: adminListOrders
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/OrderStatus' }
+          style: form
+          explode: false
+        - name: needsAttention
+          in: query
+          schema: { type: boolean }
+        - name: q
+          in: query
+          description: Order number, customer email or name (prefix match)
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOrderPage' }
+  /admin/orders/{id}:
+    get:
+      tags: [Admin · Orders]
+      operationId: adminGetOrder
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOrder' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin/orders/{id}/status:
+    post:
+      tags: [Admin · Orders]
+      operationId: adminAdvanceOrderStatus
+      summary: Move forward PLACED→PACKED→SHIPPED→DELIVERED (SHIPPED requires courier + tracking)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdvanceStatusRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOrder' }
+        '409':
+          description: INVALID_TRANSITION
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/orders/{id}/cancel:
+    post:
+      tags: [Admin · Orders]
+      operationId: adminCancelOrder
+      summary: Cancel from PLACED or PACKED; restores stock; refund is manual in the gateway (D-017)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '200':
+          description: Cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOrder' }
+        '409':
+          description: INVALID_TRANSITION
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+  /admin/orders/{id}/bookkeeping:
+    patch:
+      tags: [Admin · Orders]
+      operationId: adminUpdateOrderBookkeeping
+      summary: Refund flag/note and clearing needs-attention
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refunded: { type: boolean }
+                refundNote: { type: string, maxLength: 1000 }
+                needsAttention: { type: boolean }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminOrder' }
+
+  # ───────────────────────────── Admin · Coupons ─────────────────────────────
+  /admin/coupons:
+    get:
+      tags: [Admin · Coupons]
+      operationId: adminListCoupons
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: state
+          in: query
+          schema: { $ref: '#/components/schemas/CouponState' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCouponPage' }
+    post:
+      tags: [Admin · Coupons]
+      operationId: adminCreateCoupon
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCouponInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCoupon' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/coupons/{id}:
+    patch:
+      tags: [Admin · Coupons]
+      operationId: adminUpdateCoupon
+      summary: Update (code is immutable once redeemed; disable via active=false)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCouponPatch' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminCoupon' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  # ───────────────────────────── Admin · Reviews & stories ─────────────────────────────
+  /admin/reviews:
+    get:
+      tags: [Admin · Reviews]
+      operationId: adminListReviews
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: visibility
+          in: query
+          schema: { $ref: '#/components/schemas/ReviewVisibility' }
+        - name: productId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReviewPage' }
+  /admin/reviews/{id}/visibility:
+    patch:
+      tags: [Admin · Reviews]
+      operationId: adminSetReviewVisibility
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visibility]
+              properties:
+                visibility: { $ref: '#/components/schemas/ReviewVisibility' }
+      responses:
+        '200':
+          description: Updated (product aggregates recomputed)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminReview' }
+  /admin/reviews/{id}:
+    delete:
+      tags: [Admin · Reviews]
+      operationId: adminDeleteReview
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '204': { description: Deleted }
+  /admin/ritual-stories:
+    get:
+      tags: [Admin · Stories]
+      operationId: adminListRitualStories
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/RitualStoryStatus' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RitualStoryPage' }
+  /admin/ritual-stories/{id}:
+    patch:
+      tags: [Admin · Stories]
+      operationId: adminModerateRitualStory
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/RitualStoryStatus' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RitualStory' }
+
+  # ───────────────────────────── Admin · Media, settings, admins, audit ─────────────────────────────
+  /admin/media:
+    post:
+      tags: [Admin · Media]
+      operationId: adminUploadImage
+      summary: Upload an image to Cloudinary (jpeg/png/webp, ≤ 10 MB) and get its URL (D-031, D-068)
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, purpose]
+              properties:
+                file: { type: string, format: binary }
+                purpose: { $ref: '#/components/schemas/ImagePurpose' }
+      responses:
+        '201':
+          description: Uploaded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadedImage' }
+        '413': { description: File too large (IMAGE_TOO_LARGE) }
+        '415': { description: Unsupported type (IMAGE_TYPE_NOT_ALLOWED) }
+  /admin/settings:
+    get:
+      tags: [Admin · Settings]
+      operationId: adminGetSettings
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreSettings' }
+    patch:
+      tags: [Admin · Settings]
+      operationId: adminUpdateSettings
+      x-requires-reauth: true
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StoreSettingsPatch' }
+      responses:
+        '403': { $ref: '#/components/responses/ReauthRequired' }
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreSettings' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /admin/admins:
+    get:
+      tags: [Admin · Admins]
+      operationId: adminListAdmins
+      security: [{ adminSession: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AdminUser' }
+    post:
+      tags: [Admin · Admins]
+      operationId: adminCreateAdmin
+      x-requires-reauth: true
+      summary: Create another admin (password ≥ 12 chars); first admin is a manual DB insert (D-049)
+      security: [{ adminSession: [] }]
+      parameters: [{ $ref: '#/components/parameters/ClientHeader' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 12, maxLength: 128 }
+      responses:
+        '403': { $ref: '#/components/responses/ReauthRequired' }
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminUser' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/admins/{id}:
+    delete:
+      tags: [Admin · Admins]
+      operationId: adminRemoveAdmin
+      x-requires-reauth: true
+      summary: Remove admin role (cannot remove yourself or the last admin)
+      security: [{ adminSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/ClientHeader'
+      responses:
+        '403': { $ref: '#/components/responses/ReauthRequired' }
+        '204': { description: Removed }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /admin/audit:
+    get:
+      tags: [Admin · Admins]
+      operationId: adminListAudit
+      security: [{ adminSession: [] }]
+      parameters:
+        - name: entity
+          in: query
+          schema: { type: string }
+        - name: entityId
+          in: query
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditPage' }
+
+components:
+  securitySchemes:
+    customerSession:
+      type: apiKey
+      in: cookie
+      name: __Secure-auriva_session
+      description: Opaque server-side session ID (32 random bytes; DB stores SHA-256). HttpOnly; Secure; SameSite=Lax; Domain=<domain>. Idle 30 d, absolute 90 d.
+    adminSession:
+      type: apiKey
+      in: cookie
+      name: __Host-auriva_admin
+      description: Opaque server-side admin session. HttpOnly; Secure; SameSite=Strict; host-only; Path=/. Idle 30 min, absolute 8 h. Sensitive actions (x-requires-reauth) need POST /admin/auth/reauth within the last 10 min.
+
+  headers:
+    SetSessionCookies:
+      description: Sets `__Secure-auriva_session` (HttpOnly; Secure; SameSite=Lax; Domain=<domain>; Path=/)
+      schema: { type: string }
+    SetAdminSessionCookies:
+      description: Sets `__Host-auriva_admin` (HttpOnly; Secure; SameSite=Strict; host-only; Path=/)
+      schema: { type: string }
+
+  parameters:
+    ClientHeader:
+      name: X-Auriva-Client
+      in: header
+      required: true
+      description: CSRF defence (D-072). Required on every state-changing request.
+      schema: { type: string, enum: [storefront, admin] }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CartItemId:
+      name: cartItemId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ProductSlug:
+      name: productSlug
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Slug' }
+    CategorySlug:
+      name: categorySlug
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Slug' }
+    BlogSlug:
+      name: blogSlug
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/Slug' }
+
+  responses:
+    BadRequest:
+      description: Invalid or expired token / malformed request
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: Not signed in or bad credentials (UNAUTHENTICATED, INVALID_CREDENTIALS)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Signed in but not allowed (FORBIDDEN, REVIEW_NOT_ELIGIBLE)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    FeatureDisabled:
+      description: FEATURE_DISABLED (email verification flag is off)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ReauthRequired:
+      description: REAUTH_REQUIRED. Call POST /admin/auth/reauth, then retry
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: NOT_FOUND
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Uniqueness or state conflict (EMAIL_TAKEN, SLUG_TAKEN, SLUG_LOCKED, CODE_TAKEN, ALREADY_REVIEWED, LAST_ADMIN, IN_USE)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    OutOfStock:
+      description: OUT_OF_STOCK or PRODUCT_UNAVAILABLE
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    ValidationError:
+      description: VALIDATION_FAILED; `details` lists each field problem
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  schemas:
+    # ── primitives
+    Slug:
+      type: string
+      pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+      maxLength: 120
+    Paise:
+      type: integer
+      minimum: 0
+      description: Money in paise (₹1 = 100).
+    Phone:
+      type: string
+      pattern: '^\+91[6-9][0-9]{9}$'
+      description: Indian mobile in E.164.
+    Timestamp:
+      type: string
+      format: date-time
+    ImageUrl:
+      type: string
+      format: uri
+    Aura:
+      type: string
+      enum: [softness, grounding, intimacy, balance, stillness, depth, comfort, purity, clarity]
+      description: Fixed list in v1 (D-042); labels and glyphs live in the storefront.
+    PageMeta:
+      type: object
+      required: [page, size, totalItems, totalPages]
+      properties:
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+    IdOrder:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          uniqueItems: true
+          items: { type: string, format: uuid }
+    Error:
+      type: object
+      required: [timestamp, status, code, message]
+      properties:
+        timestamp: { $ref: '#/components/schemas/Timestamp' }
+        status: { type: integer }
+        code:
+          type: string
+          description: Stable machine-readable code (see responses and endpoint descriptions).
+        message: { type: string, description: Human-readable, safe to show }
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              code: { type: string }
+              message: { type: string }
+
+    # ── auth & users
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8, maxLength: 128 }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    TokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string }
+    Me:
+      type: object
+      required: [id, name, email, emailVerified]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        emailVerified: { type: boolean }
+        phone: { $ref: '#/components/schemas/Phone' }
+        lastShippingAddress:
+          oneOf:
+            - $ref: '#/components/schemas/ShippingAddress'
+            - type: 'null'
+    AdminUser:
+      type: object
+      required: [id, name, email]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+
+    # ── catalog
+    Category:
+      type: object
+      required: [slug, name, eyebrow, headline, intro, burnTime, cardImageUrl, bannerImageUrl]
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        name: { type: string }
+        eyebrow: { type: string }
+        headline: { type: string }
+        intro: { type: string }
+        burnTime: { type: string, examples: ['30–35 min ritual'] }
+        cardImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        bannerImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+    CategoryDetail:
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          required: [products, otherCategories]
+          properties:
+            products:
+              type: array
+              items: { $ref: '#/components/schemas/ProductSection' }
+            otherCategories:
+              type: array
+              items: { $ref: '#/components/schemas/Category' }
+    ProductCard:
+      type: object
+      required: [slug, name, categorySlug, aura, tagline, mrpPaise, sellingPricePaise, inStock, imageUrl]
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        name: { type: string }
+        categorySlug: { $ref: '#/components/schemas/Slug' }
+        aura: { $ref: '#/components/schemas/Aura' }
+        tagline: { type: string }
+        mrpPaise: { $ref: '#/components/schemas/Paise' }
+        sellingPricePaise: { $ref: '#/components/schemas/Paise' }
+        inStock: { type: boolean }
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        ratingAvg: { type: number, minimum: 0, maximum: 5 }
+        ratingCount: { type: integer, minimum: 0 }
+    ProductSection:
+      description: A product as rendered on the category page (alternating sections)
+      allOf:
+        - $ref: '#/components/schemas/ProductCard'
+        - type: object
+          required: [poem, fragranceNotes]
+          properties:
+            poem: { type: string }
+            fragranceNotes: { type: string }
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProductSection'
+        - type: object
+          required: [category, auraQuality, bestFor, packContents, burnTime, images, related]
+          properties:
+            category: { $ref: '#/components/schemas/Category' }
+            auraQuality: { type: string, examples: ['Stability'] }
+            bestFor: { type: string }
+            packContents: { type: string, examples: ['40 sticks and 1 holder'] }
+            burnTime: { type: string }
+            images:
+              type: array
+              minItems: 1
+              items:
+                type: object
+                required: [url]
+                properties:
+                  url: { $ref: '#/components/schemas/ImageUrl' }
+                  altText: { type: string }
+            related:
+              type: array
+              maxItems: 4
+              items: { $ref: '#/components/schemas/ProductCard' }
+    ProductCardPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/ProductCard' }
+
+    # ── reviews
+    ReviewVisibility:
+      type: string
+      enum: [VISIBLE, HIDDEN]
+    CreateReviewRequest:
+      type: object
+      required: [stars]
+      properties:
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, maxLength: 1000, description: Plain text; never rendered as Markdown/HTML (review A10) }
+    Review:
+      type: object
+      required: [id, stars, authorName, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        stars: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+        authorName: { type: string, description: First name + last initial }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        isMine: { type: boolean }
+    ReviewPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/Review' }
+    AdminReview:
+      allOf:
+        - $ref: '#/components/schemas/Review'
+        - type: object
+          required: [visibility, productSlug, productName, userEmail]
+          properties:
+            visibility: { $ref: '#/components/schemas/ReviewVisibility' }
+            productSlug: { $ref: '#/components/schemas/Slug' }
+            productName: { type: string }
+            userEmail: { type: string, format: email }
+            moderatedAt: { $ref: '#/components/schemas/Timestamp' }
+    AdminReviewPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AdminReview' }
+
+    # ── home, journal, store
+    Home:
+      type: object
+      required: [highlights, mostReordered, ritualCards, instaTiles]
+      properties:
+        highlights:
+          type: array
+          items: { $ref: '#/components/schemas/Category' }
+        mostReordered:
+          type: array
+          items: { $ref: '#/components/schemas/ProductCard' }
+        ritualCards:
+          type: array
+          description: Designed for exactly 4 (2×2)
+          items: { $ref: '#/components/schemas/RitualCard' }
+        instaTiles:
+          type: array
+          items: { $ref: '#/components/schemas/InstaTile' }
+    RitualCard:
+      type: object
+      required: [title, subtitle, body, imageUrl, productSlug, position]
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        body: { type: string }
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        productSlug: { $ref: '#/components/schemas/Slug' }
+        position: { type: integer, description: Storefront picks the sigil by position }
+    InstaTile:
+      type: object
+      required: [imageUrl, altText]
+      properties:
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        altText: { type: string }
+        productSlug: { $ref: '#/components/schemas/Slug' }
+        instagramUrl: { type: string, format: uri }
+    BlogStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED]
+    BlogCategory:
+      type: object
+      required: [id, name, slug, position]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        slug: { $ref: '#/components/schemas/Slug' }
+        position: { type: integer }
+    BlogCategoryInput:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        slug: { $ref: '#/components/schemas/Slug' }
+        position: { type: integer }
+    BlogCategoryPatch:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        slug: { $ref: '#/components/schemas/Slug' }
+        position: { type: integer }
+    BlogCard:
+      type: object
+      required: [slug, title, excerpt, category, readTimeMinutes, coverImageUrl]
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        title: { type: string }
+        excerpt: { type: string }
+        category: { $ref: '#/components/schemas/BlogCategory' }
+        readTimeMinutes: { type: integer, minimum: 1 }
+        coverImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        publishedAt: { $ref: '#/components/schemas/Timestamp' }
+    BlogDetail:
+      allOf:
+        - $ref: '#/components/schemas/BlogCard'
+        - type: object
+          required: [intro, bodyMarkdown, related]
+          properties:
+            intro: { type: string }
+            bodyMarkdown: { type: string, description: Markdown; storefront renders safely (no raw HTML) }
+            related:
+              type: array
+              maxItems: 3
+              items: { $ref: '#/components/schemas/BlogCard' }
+    BlogCardPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/BlogCard' }
+    PublicSettings:
+      type: object
+      required: [freeShippingThresholdPaise, shippingFeePaise, emailVerificationEnabled]
+      properties:
+        freeShippingThresholdPaise: { $ref: '#/components/schemas/Paise' }
+        shippingFeePaise: { $ref: '#/components/schemas/Paise' }
+        emailVerificationEnabled: { type: boolean }
+        instagramHandle: { type: string }
+
+    # ── cart & checkout
+    Cart:
+      type: object
+      required: [lines, itemCount, totals]
+      properties:
+        lines:
+          type: array
+          items: { $ref: '#/components/schemas/CartLine' }
+        itemCount: { type: integer, description: Total quantity (Nav badge) }
+        coupon:
+          oneOf:
+            - $ref: '#/components/schemas/AppliedCoupon'
+            - type: 'null'
+        totals: { $ref: '#/components/schemas/Totals' }
+    CartLine:
+      type: object
+      required: [id, product, quantity, lineTotalPaise, availability]
+      properties:
+        id: { type: string, format: uuid }
+        product: { $ref: '#/components/schemas/CartProduct' }
+        quantity: { type: integer, minimum: 1 }
+        lineTotalPaise: { $ref: '#/components/schemas/Paise' }
+        availability:
+          type: string
+          enum: [AVAILABLE, INSUFFICIENT_STOCK, OUT_OF_STOCK, UNAVAILABLE]
+          description: Lines that are not AVAILABLE block checkout.
+        availableQuantity: { type: integer, minimum: 0 }
+        priceChangedFromPaise:
+          allOf: [{ $ref: '#/components/schemas/Paise' }]
+          description: Present when the price changed since the item was added; the current price is what's charged (review B5)
+    CartProduct:
+      type: object
+      required: [slug, name, aura, packContents, imageUrl, mrpPaise, sellingPricePaise]
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        name: { type: string }
+        aura: { $ref: '#/components/schemas/Aura' }
+        packContents: { type: string }
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        mrpPaise: { $ref: '#/components/schemas/Paise' }
+        sellingPricePaise: { $ref: '#/components/schemas/Paise' }
+    AppliedCoupon:
+      type: object
+      required: [code, valid]
+      properties:
+        code: { type: string }
+        valid: { type: boolean, description: False if it stopped being valid since applied }
+        invalidReason: { type: string }
+    Totals:
+      type: object
+      required: [subtotalPaise, discountPaise, shippingFeePaise, totalPaise, freeShippingThresholdPaise]
+      properties:
+        subtotalPaise: { $ref: '#/components/schemas/Paise' }
+        discountPaise: { $ref: '#/components/schemas/Paise' }
+        shippingFeePaise: { $ref: '#/components/schemas/Paise' }
+        totalPaise: { $ref: '#/components/schemas/Paise' }
+        freeShippingThresholdPaise: { $ref: '#/components/schemas/Paise' }
+        amountToFreeShippingPaise: { $ref: '#/components/schemas/Paise' }
+    ShippingAddress:
+      type: object
+      required: [name, phone, line1, city, state, pincode]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        phone: { $ref: '#/components/schemas/Phone' }
+        line1: { type: string, minLength: 1, maxLength: 200 }
+        line2: { type: string, maxLength: 200 }
+        city: { type: string, minLength: 1, maxLength: 100 }
+        state: { type: string, minLength: 1, maxLength: 100 }
+        pincode: { type: string, pattern: '^[1-9][0-9]{5}$' }
+    PaymentProvider:
+      type: string
+      enum: [fake]
+      description: Only the fake provider exists until the gateway is chosen (DF-1); real providers are added to this enum. `fake` is local-only and never registered in production (review A1).
+    CheckoutResponse:
+      type: object
+      required: [order, payment]
+      properties:
+        order: { $ref: '#/components/schemas/Order' }
+        payment:
+          type: object
+          required: [provider, clientPayload]
+          properties:
+            provider: { $ref: '#/components/schemas/PaymentProvider' }
+            clientPayload:
+              type: object
+              additionalProperties: true
+              description: Provider-specific data for its checkout widget (e.g. provider order id, public key).
+            expiresAt: { $ref: '#/components/schemas/Timestamp' }
+
+    # ── orders
+    OrderStatus:
+      type: string
+      enum: [PENDING_PAYMENT, PAYMENT_FAILED, EXPIRED, PLACED, PACKED, SHIPPED, DELIVERED, CANCELLED]
+    OrderLine:
+      type: object
+      required: [productSlug, productName, quantity, unitPricePaise, mrpPaise, lineTotalPaise]
+      properties:
+        productSlug: { $ref: '#/components/schemas/Slug' }
+        productName: { type: string }
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        quantity: { type: integer, minimum: 1 }
+        unitPricePaise: { $ref: '#/components/schemas/Paise' }
+        mrpPaise: { $ref: '#/components/schemas/Paise' }
+        lineTotalPaise: { $ref: '#/components/schemas/Paise' }
+        canReview: { type: boolean, description: True when order is DELIVERED and not yet reviewed }
+    StatusEvent:
+      type: object
+      required: [status, at]
+      properties:
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        at: { $ref: '#/components/schemas/Timestamp' }
+        note: { type: string }
+    OrderSummary:
+      type: object
+      required: [id, orderNumber, status, totalPaise, itemCount, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        orderNumber: { type: string, examples: ['AUR-000123'] }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        totalPaise: { $ref: '#/components/schemas/Paise' }
+        itemCount: { type: integer }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        placedAt: { $ref: '#/components/schemas/Timestamp' }
+    Order:
+      allOf:
+        - $ref: '#/components/schemas/OrderSummary'
+        - type: object
+          required: [lines, totals, shippingAddress, timeline]
+          properties:
+            lines:
+              type: array
+              items: { $ref: '#/components/schemas/OrderLine' }
+            couponCode: { type: string }
+            totals:
+              type: object
+              required: [subtotalPaise, discountPaise, shippingFeePaise, totalPaise]
+              properties:
+                subtotalPaise: { $ref: '#/components/schemas/Paise' }
+                discountPaise: { $ref: '#/components/schemas/Paise' }
+                shippingFeePaise: { $ref: '#/components/schemas/Paise' }
+                totalPaise: { $ref: '#/components/schemas/Paise' }
+            shippingAddress: { $ref: '#/components/schemas/ShippingAddress' }
+            reservedUntil: { $ref: '#/components/schemas/Timestamp' }
+            courierName: { type: string }
+            trackingUrl: { type: string, format: uri }
+            trackingNumber: { type: string }
+            cancelReason: { type: string }
+            timeline:
+              type: array
+              items: { $ref: '#/components/schemas/StatusEvent' }
+    OrderSummaryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/OrderSummary' }
+    AdminOrder:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          required: [customer, refunded, needsAttention, payments]
+          properties:
+            customer:
+              type: object
+              required: [id, name, email]
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string }
+                email: { type: string, format: email }
+            refunded: { type: boolean }
+            refundNote: { type: string }
+            needsAttention: { type: boolean }
+            needsAttentionReason: { type: string, examples: ['PAID_AFTER_EXPIRY_NO_STOCK', 'AMOUNT_MISMATCH'] }
+            payments:
+              type: array
+              items:
+                type: object
+                required: [provider, status, amountPaise, createdAt]
+                properties:
+                  provider: { $ref: '#/components/schemas/PaymentProvider' }
+                  providerPaymentId: { type: string }
+                  status: { type: string, enum: [CREATED, SUCCEEDED, FAILED] }
+                  amountPaise: { $ref: '#/components/schemas/Paise' }
+                  createdAt: { $ref: '#/components/schemas/Timestamp' }
+    AdminOrderPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                allOf:
+                  - $ref: '#/components/schemas/OrderSummary'
+                  - type: object
+                    properties:
+                      customerName: { type: string }
+                      customerEmail: { type: string, format: email }
+                      needsAttention: { type: boolean }
+    AdvanceStatusRequest:
+      type: object
+      required: [to]
+      properties:
+        to: { type: string, enum: [PACKED, SHIPPED, DELIVERED] }
+        courierName: { type: string, maxLength: 100, description: Required when to=SHIPPED }
+        trackingUrl: { type: string, format: uri, description: Required when to=SHIPPED }
+        trackingNumber: { type: string, maxLength: 100 }
+        note: { type: string, maxLength: 500 }
+
+    # ── admin catalog
+    AdminCategory:
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          required: [id, position, active]
+          properties:
+            id: { type: string, format: uuid }
+            position: { type: integer }
+            active: { type: boolean }
+    AdminCategoryInput:
+      type: object
+      required: [slug, name, eyebrow, headline, intro, burnTime, cardImageUrl, bannerImageUrl]
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        name: { type: string, minLength: 1, maxLength: 60 }
+        eyebrow: { type: string, maxLength: 60 }
+        headline: { type: string, maxLength: 120 }
+        intro: { type: string, maxLength: 600 }
+        burnTime: { type: string, maxLength: 40 }
+        cardImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        bannerImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        active: { type: boolean, default: true }
+    AdminCategoryPatch:
+      type: object
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        name: { type: string, minLength: 1, maxLength: 60 }
+        eyebrow: { type: string, maxLength: 60 }
+        headline: { type: string, maxLength: 120 }
+        intro: { type: string, maxLength: 600 }
+        burnTime: { type: string, maxLength: 40 }
+        cardImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        bannerImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        active: { type: boolean }
+    AdminProductImage:
+      type: object
+      required: [url, cloudinaryPublicId]
+      properties:
+        url: { $ref: '#/components/schemas/ImageUrl' }
+        cloudinaryPublicId: { type: string }
+        altText: { type: string, maxLength: 200 }
+    AdminProductFields:
+      type: object
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        categoryId: { type: string, format: uuid }
+        aura: { $ref: '#/components/schemas/Aura' }
+        auraQuality: { type: string, maxLength: 60 }
+        tagline: { type: string, maxLength: 160 }
+        poem: { type: string, maxLength: 300 }
+        fragranceNotes: { type: string, maxLength: 200 }
+        bestFor: { type: string, maxLength: 160 }
+        packContents: { type: string, maxLength: 80 }
+        burnTime: { type: string, maxLength: 40 }
+        mrpPaise: { $ref: '#/components/schemas/Paise' }
+        sellingPricePaise:
+          allOf: [{ $ref: '#/components/schemas/Paise' }]
+          description: Must be ≤ mrpPaise
+        images:
+          type: array
+          description: Full ordered list; first is the main image
+          items: { $ref: '#/components/schemas/AdminProductImage' }
+        active: { type: boolean }
+    AdminProductInput:
+      allOf:
+        - $ref: '#/components/schemas/AdminProductFields'
+        - type: object
+          required: [slug, name, categoryId, aura, auraQuality, tagline, poem, fragranceNotes, bestFor, packContents, burnTime, mrpPaise, sellingPricePaise, initialStock, images]
+          properties:
+            initialStock: { type: integer, minimum: 0, description: Only at creation; afterwards use stock-adjustments }
+    AdminProductPatch:
+      $ref: '#/components/schemas/AdminProductFields'
+    AdminProduct:
+      allOf:
+        - $ref: '#/components/schemas/AdminProductFields'
+        - type: object
+          required: [id, slug, name, categoryId, aura, mrpPaise, sellingPricePaise, stockQuantity, images, active, relatedProductIds, ratingAvg, ratingCount, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            stockQuantity: { type: integer, minimum: 0, description: Available to sell now (net of reservations) }
+            slugLocked: { type: boolean }
+            relatedProductIds:
+              type: array
+              items: { type: string, format: uuid }
+            ratingAvg: { type: number }
+            ratingCount: { type: integer }
+            updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    AdminProductPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AdminProduct' }
+
+    # ── admin home
+    AdminRitualCardFields:
+      type: object
+      properties:
+        title: { type: string, maxLength: 40 }
+        subtitle: { type: string, maxLength: 60 }
+        body: { type: string, maxLength: 200 }
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        productId: { type: string, format: uuid }
+        position: { type: integer }
+        active: { type: boolean }
+    AdminRitualCardInput:
+      allOf:
+        - $ref: '#/components/schemas/AdminRitualCardFields'
+        - type: object
+          required: [title, subtitle, body, imageUrl, productId]
+    AdminRitualCardPatch:
+      $ref: '#/components/schemas/AdminRitualCardFields'
+    AdminRitualCard:
+      allOf:
+        - $ref: '#/components/schemas/AdminRitualCardFields'
+        - type: object
+          required: [id, title, subtitle, body, imageUrl, productId, position, active]
+          properties:
+            id: { type: string, format: uuid }
+    AdminInstaTileFields:
+      type: object
+      properties:
+        imageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        altText: { type: string, maxLength: 200 }
+        productId: { type: ['string', 'null'], format: uuid }
+        instagramUrl: { type: ['string', 'null'], format: uri }
+        position: { type: integer }
+        active: { type: boolean }
+    AdminInstaTileInput:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstaTileFields'
+        - type: object
+          required: [imageUrl, altText]
+    AdminInstaTilePatch:
+      $ref: '#/components/schemas/AdminInstaTileFields'
+    AdminInstaTile:
+      allOf:
+        - $ref: '#/components/schemas/AdminInstaTileFields'
+        - type: object
+          required: [id, imageUrl, altText, position, active]
+          properties:
+            id: { type: string, format: uuid }
+
+    # ── admin journal
+    AdminBlogFields:
+      type: object
+      properties:
+        slug: { $ref: '#/components/schemas/Slug' }
+        title: { type: string, maxLength: 160 }
+        excerpt: { type: string, maxLength: 300 }
+        intro: { type: string, maxLength: 500 }
+        bodyMarkdown: { type: string, maxLength: 50000 }
+        coverImageUrl: { $ref: '#/components/schemas/ImageUrl' }
+        categoryId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/BlogStatus' }
+    AdminBlogInput:
+      allOf:
+        - $ref: '#/components/schemas/AdminBlogFields'
+        - type: object
+          required: [slug, title, excerpt, intro, bodyMarkdown, coverImageUrl, categoryId]
+    AdminBlogPatch:
+      $ref: '#/components/schemas/AdminBlogFields'
+    AdminBlog:
+      allOf:
+        - $ref: '#/components/schemas/AdminBlogFields'
+        - type: object
+          required: [id, slug, title, status, position, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            position: { type: integer }
+            publishedAt: { $ref: '#/components/schemas/Timestamp' }
+            updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    AdminBlogPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AdminBlog' }
+
+    # ── coupons
+    CouponState:
+      type: string
+      enum: [SCHEDULED, ACTIVE, EXPIRED, DISABLED]
+      description: Derived from active + validFrom/validUntil (D-023)
+    AdminCouponFields:
+      type: object
+      properties:
+        code: { type: string, pattern: '^[A-Za-z0-9_-]{6,40}$', description: 'Case-insensitive unique; min 6 chars (review A5). Immutable once redeemed.' }
+        type: { type: string, enum: [PERCENT, FLAT] }
+        value: { type: integer, minimum: 1, description: 'PERCENT: 1–100; FLAT: paise' }
+        maxDiscountPaise: { type: ['integer', 'null'], minimum: 1, description: PERCENT only }
+        minOrderValuePaise: { $ref: '#/components/schemas/Paise' }
+        perCustomerLimit: { type: string, enum: [ONCE, UNLIMITED] }
+        validFrom: { $ref: '#/components/schemas/Timestamp' }
+        validUntil: { type: ['string', 'null'], format: date-time }
+        active: { type: boolean }
+    AdminCouponInput:
+      allOf:
+        - $ref: '#/components/schemas/AdminCouponFields'
+        - type: object
+          required: [code, type, value, minOrderValuePaise, perCustomerLimit, validFrom]
+    AdminCouponPatch:
+      $ref: '#/components/schemas/AdminCouponFields'
+    AdminCoupon:
+      allOf:
+        - $ref: '#/components/schemas/AdminCouponFields'
+        - type: object
+          required: [id, code, type, value, perCustomerLimit, validFrom, active, state, redemptionCount]
+          properties:
+            id: { type: string, format: uuid }
+            state: { $ref: '#/components/schemas/CouponState' }
+            redemptionCount: { type: integer, minimum: 0 }
+    AdminCouponPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AdminCoupon' }
+
+    # ── stories, media, settings, audit
+    RitualStoryStatus:
+      type: string
+      enum: [NEW, APPROVED, REJECTED]
+    RitualStory:
+      type: object
+      required: [id, name, story, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        story: { type: string }
+        sourcePostSlug: { type: string }
+        userEmail: { type: string, format: email }
+        status: { $ref: '#/components/schemas/RitualStoryStatus' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        moderatedAt: { $ref: '#/components/schemas/Timestamp' }
+    RitualStoryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/RitualStory' }
+    ImagePurpose:
+      type: string
+      enum: [PRODUCT, CATEGORY_CARD, CATEGORY_BANNER, BLOG_COVER, RITUAL_CARD, INSTA_TILE]
+      description: Used for folder organisation and to return the recommended crop ratio.
+    UploadedImage:
+      type: object
+      required: [url, cloudinaryPublicId, width, height, recommendedRatio]
+      properties:
+        url: { $ref: '#/components/schemas/ImageUrl' }
+        cloudinaryPublicId: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        recommendedRatio: { type: string, examples: ['4:5', '3:4', '16:9', '1:1'] }
+    StoreSettings:
+      type: object
+      required: [freeShippingThresholdPaise, shippingFeePaise, reservationMinutes, emailVerificationEnabled, contactInboxEmail]
+      properties:
+        freeShippingThresholdPaise: { $ref: '#/components/schemas/Paise' }
+        shippingFeePaise: { $ref: '#/components/schemas/Paise' }
+        reservationMinutes: { type: integer, minimum: 5, maximum: 60 }
+        emailVerificationEnabled: { type: boolean }
+        contactInboxEmail: { type: string, format: email }
+        instagramHandle: { type: string, pattern: '^@?[A-Za-z0-9._]{1,30}$' }
+        updatedAt: { $ref: '#/components/schemas/Timestamp' }
+    StoreSettingsPatch:
+      type: object
+      properties:
+        freeShippingThresholdPaise: { $ref: '#/components/schemas/Paise' }
+        shippingFeePaise: { $ref: '#/components/schemas/Paise' }
+        reservationMinutes: { type: integer, minimum: 5, maximum: 60 }
+        emailVerificationEnabled: { type: boolean }
+        contactInboxEmail: { type: string, format: email }
+        instagramHandle: { type: string, pattern: '^@?[A-Za-z0-9._]{1,30}$' }
+    SessionInfo:
+      type: object
+      required: [id, current, createdAt, lastSeenAt]
+      properties:
+        id: { type: string, format: uuid }
+        current: { type: boolean, description: The session making this request }
+        device: { type: string, description: Derived from the user agent, e.g. "Chrome on Android" }
+        approximateLocation: { type: string, description: City/country from IP, if available }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+        lastSeenAt: { $ref: '#/components/schemas/Timestamp' }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 8, maxLength: 128, description: Admins need ≥ 12 }
+    StockAdjustment:
+      type: object
+      required: [id, delta, reason, adminEmail, at, stockAfter]
+      properties:
+        id: { type: string, format: uuid }
+        delta: { type: integer }
+        reason: { type: string }
+        adminEmail: { type: string, format: email }
+        stockAfter: { type: integer, minimum: 0 }
+        at: { $ref: '#/components/schemas/Timestamp' }
+    StockAdjustmentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/StockAdjustment' }
+    AdminDashboard:
+      type: object
+      required: [today, last7Days, toPack, needsAttention, lowStock, newReviews, newRitualStories]
+      properties:
+        today: { $ref: '#/components/schemas/SalesSummary' }
+        last7Days: { $ref: '#/components/schemas/SalesSummary' }
+        toPack: { type: integer, description: Orders in PLACED }
+        needsAttention: { type: integer }
+        lowStock:
+          type: array
+          description: Active products at or below 🟡 5 units, lowest first (max 10)
+          items:
+            type: object
+            required: [id, name, stockQuantity]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              stockQuantity: { type: integer }
+        newReviews: { type: integer, description: Last 7 days }
+        newRitualStories: { type: integer, description: Status NEW }
+    SalesSummary:
+      type: object
+      required: [orders, revenuePaise]
+      properties:
+        orders: { type: integer, description: Paid orders (PLACED or later, excluding CANCELLED) }
+        revenuePaise: { $ref: '#/components/schemas/Paise' }
+    AdminCustomer:
+      type: object
+      required: [id, name, email, emailVerified, active, orderCount, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        emailVerified: { type: boolean }
+        active: { type: boolean }
+        orderCount: { type: integer }
+        lastOrderAt: { $ref: '#/components/schemas/Timestamp' }
+        createdAt: { $ref: '#/components/schemas/Timestamp' }
+    AdminCustomerPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AdminCustomer' }
+    AuditEntry:
+      type: object
+      required: [id, adminEmail, action, entity, at]
+      properties:
+        id: { type: string, format: uuid }
+        adminEmail: { type: string, format: email }
+        action: { type: string, examples: ['product.update', 'order.cancel', 'settings.update'] }
+        entity: { type: string }
+        entityId: { type: string }
+        diff: { type: object, additionalProperties: true }
+        at: { $ref: '#/components/schemas/Timestamp' }
+    AuditPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/AuditEntry' }

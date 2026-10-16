@@ -27,7 +27,7 @@ export function useUser() {
 
   // The mock keeps state in localStorage: refresh when another tab changes it.
   useEffect(() => {
-    if (!api.usingMockApi) return;
+    if (api.live("account") && api.live("cart") && api.live("orders")) return;
     const onStorage = (event: StorageEvent) => {
       if (event.key?.startsWith("auriva.")) void queryClient.invalidateQueries();
     };

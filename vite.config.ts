@@ -12,4 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    // The backend API only accepts requests from http://localhost:3000 (see STOREFRONT-API.md).
+    server: { port: 3000, strictPort: true },
+  },
 });

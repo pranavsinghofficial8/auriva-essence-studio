@@ -9,6 +9,10 @@ import prodCoconutCinnamon from "@/assets/prod-coconut-cinnamon.jpg";
 import prodLemongrass from "@/assets/prod-lemongrass-citronella.jpg";
 import prodCamphorTulsi from "@/assets/prod-camphor-tulsi.jpg";
 
+import collSticks from "@/assets/coll-sticks.jpg";
+import collCones from "@/assets/coll-cones.jpg";
+import collBambooless from "@/assets/coll-bambooless.jpg";
+
 import bannerSticks from "@/assets/banner-sticks.jpg";
 import bannerCones from "@/assets/banner-cones.jpg";
 import bannerDhoop from "@/assets/banner-dhoop.jpg";
@@ -51,6 +55,12 @@ export type Product = {
   ritual: string;
   /** Background photo for the aura band; falls back to the category banner. */
   ritualImage?: string;
+  /** MRP in rupees when it's above `price`: shown struck through (backend only). */
+  mrp?: number;
+  /** False when sold out (backend only; the built-in catalog is always in stock). */
+  inStock?: boolean;
+  /** Customer reviews (backend only). */
+  rating?: { average: number; count: number };
 };
 
 export type Category = {
@@ -61,6 +71,8 @@ export type Category = {
   intro: string;
   banner: string;
   burn: string;
+  /** Photo for the homepage collection card. */
+  card: string;
 };
 
 export const categories: Category[] = [
@@ -72,6 +84,7 @@ export const categories: Category[] = [
     intro:
       "Hand-rolled on a base of renewed flowers, charcoal-free and infused with essential oils. A thin thread of smoke that marks the beginning of something slower.",
     banner: bannerSticks,
+    card: collSticks,
     burn: "30–35 min ritual",
   },
   {
@@ -82,6 +95,7 @@ export const categories: Category[] = [
     intro:
       "Compact, unhurried and richly resinous. Cones burn closer to the earth — a fuller fragrance for evenings that ask you to stay a little longer.",
     banner: bannerCones,
+    card: collCones,
     burn: "25–30 min ritual",
   },
   {
@@ -92,6 +106,7 @@ export const categories: Category[] = [
     intro:
       "Solid, bamboo-less and slow-burning. Without a bamboo spine there is nothing between you and the blend — a cleaner, rounder, longer ritual.",
     banner: bannerDhoop,
+    card: collBambooless,
     burn: "40–45 min ritual",
   },
 ];

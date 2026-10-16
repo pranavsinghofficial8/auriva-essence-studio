@@ -1,5 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import Markdown, { type Components } from "react-markdown";
 
 import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
@@ -89,6 +90,13 @@ function JournalArticle() {
         </div>
 
         <div className="mx-auto w-full max-w-[820px] px-6 py-16 sm:px-10 sm:py-24">
+          {post.bodyMarkdown ? (
+            <div className="space-y-5">
+              <Markdown skipHtml components={articleMarkdown}>
+                {post.bodyMarkdown}
+              </Markdown>
+            </div>
+          ) : null}
           {post.sections.map((s) => (
             <section key={s.heading} className="mb-14 last:mb-0">
               <h2 className="text-[26px] leading-snug lowercase sm:text-[34px]">{s.heading}</h2>
@@ -194,3 +202,43 @@ function JournalArticle() {
     </div>
   );
 }
+
+/**
+ * How a backend article's Markdown renders: the same look as the built-in sections. Raw HTML is
+ * skipped and inline images are dropped, matching the admin panel's preview (STOREFRONT-API.md).
+ */
+const articleMarkdown: Components = {
+  h1: ({ children }) => (
+    <h2 className="pt-9 text-[26px] leading-snug lowercase first:pt-0 sm:text-[34px]">
+      {children}
+    </h2>
+  ),
+  h2: ({ children }) => (
+    <h2 className="pt-9 text-[26px] leading-snug lowercase first:pt-0 sm:text-[34px]">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="pt-4 text-[21px] leading-snug lowercase sm:text-[24px]">{children}</h3>
+  ),
+  p: ({ children }) => <p>{children}</p>,
+  ul: ({ children }) => <ul className="list-disc space-y-2 pl-6">{children}</ul>,
+  ol: ({ children }) => <ol className="list-decimal space-y-2 pl-6">{children}</ol>,
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      className="border-b border-foreground/40 transition-opacity duration-300 hover:opacity-60"
+    >
+      {children}
+    </a>
+  ),
+  // The brand never sets text bold; emphasis stays in the light weight.
+  strong: ({ children }) => <span className="text-foreground">{children}</span>,
+  em: ({ children }) => <em>{children}</em>,
+  blockquote: ({ children }) => (
+    <blockquote className="border-l border-foreground/30 pl-6 italic lowercase">
+      {children}
+    </blockquote>
+  ),
+  img: () => null,
+};

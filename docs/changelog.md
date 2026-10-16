@@ -2,11 +2,62 @@
 
 Newest first. Each entry says what changed and why.
 
-## 2026-10-03: softer hero edge, clearer About chapter bar
+## 2026-10-16: backend kept reachable; homepage falls back
 
-- Homepage: the hero photo now dissolves fully into ivory at its foot, and the story grid's
-  first-row photos (`PhotoTile` with `fadeTop`) rise out of that ivory, so the hard line between
-  the two sections is gone. The text tile between them is untouched.
+- The shop, journal and homepage "broke" together because the backend couldn't reach its
+  database: this Mac's address lookup for the Neon host keeps failing. The backend is now started
+  with `../.tools/dns-fallback.mjs` (outside both repos), which asks public DNS when the system
+  lookup fails; verified while the system lookup was failing.
+- If the backend still can't be reached, the homepage shows its built-in collection, bestsellers,
+  rituals and Instashop instead of dropping them, so "enter the ritual" always has its target.
+
+## 2026-10-16: catalog, homepage, journal and search read from the backend
+
+- Step 1 of `docs/api-integration.md`. With `VITE_API_URL` set, the shop, collection and product
+  pages, the homepage's collection cards, bestsellers, ritual cards and Instashop, the journal
+  and search now come from the backend; sign-in, bag, checkout and forms still use the mock
+  (`live(area)` in `lib/api/client.ts` switches one area at a time).
+- New `lib/api/backend-types.ts` (the backend's contract, verbatim), `adapt.ts` (backend shapes →
+  page shapes, paise → rupees) and `images.ts` (our bundled copies of the seed photos until
+  they're on Cloudinary, behind `VITE_BUNDLED_SEED_IMAGES`). Requests now send
+  `X-Auriva-Client: storefront`, wait up to 90 s and read the backend's error format.
+- Journal articles render the backend's Markdown with `react-markdown` (new dependency; raw HTML
+  skipped, no inline images) in the existing article style.
+- Product pages show the MRP struck through when discounted and a disabled "sold out" button;
+  collection pages and related products show "sold out". Bestsellers use each product's tagline.
+- Search runs our engine over the backend's catalog (no search endpoint yet), cached a minute.
+- Found: every post reports a 1-minute read time, and no Instagram handle is set (asked of the
+  backend developer). The post `a-guide-to-aurivas-10-fragrances` has a mismatched title, from
+  the original Lovable content; fixable now in the admin panel.
+
+## 2026-10-16: backend code on this computer
+
+- Cloned the backend (`rijulsarji/auriva-platform`) next to this repo, over a new SSH key, since
+  the saved GitHub token only covered the owner's own repositories. Installed its packages with
+  its pinned pnpm (corepack shim in `../.tools/bin`, no system changes) and generated its
+  contract code. Its `api/.env` is prepared except for the Neon database URLs.
+- The repo's API reference is newer than the copy we were sent and adds Google sign-in
+  (`POST /auth/google`); `docs/api/` now holds the repo's version.
+- The backend now runs locally (`pnpm dev:api`, health `ok`) against the developer's Neon
+  database, which was already migrated and seeded. It needed `prisma generate` once after the
+  clone. Its product photos 404 on Cloudinary until the developer uploads them.
+
+## 2026-10-10: backend contract received; site moved to port 3000
+
+- The backend developer sent their API: `docs/api/STOREFRONT-API.md` and `docs/api/openapi.yaml`
+  (copied in as-is and excluded from Prettier). It supersedes `backend-handoff.md`.
+- New `docs/api-integration.md`: setup checks, the page-by-page plan, the features their API
+  doesn't cover yet (Google sign-in, Razorpay, search, bulk enquiries, product ritual text) and a
+  message for the backend developer.
+- The dev server now runs on port 3000 (`vite.config.ts`, `.claude/launch.json`), because the
+  API only accepts requests from `localhost:3000`. Google sign-in needs `http://localhost:3000`
+  added to its JavaScript origins.
+
+## 2026-10-03: clearer About chapter bar
+
+- Tried three ways to soften the edge between the homepage hero and the story grid (a heavy
+  fade, a light fade, and a thread drawn across the edge). The owner preferred none of them, so
+  the homepage is back exactly as it was.
 - About page chapter bar: its track was a pale line on a pale pill and the gold progress barely
   showed. The track is now a faint espresso line, and the progress fill, its dot (slightly
   larger) and the active chapter icon use a new `bronze` token (gold deepened toward espresso).

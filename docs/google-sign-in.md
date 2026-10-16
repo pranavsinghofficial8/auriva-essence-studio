@@ -30,7 +30,8 @@ why; visitors never see it.
 Done on 2026-10-03. The Google Cloud project is **Auriva**, with a **Web application** OAuth
 client. The consent screen is **External** and still in **Testing**, so only the test users
 listed under **Audience** can sign in. Its Authorized JavaScript origins are
-`http://localhost:8080` and `http://localhost`. The client ID is in the owner's `.env.local`
+`http://localhost:8080` and `http://localhost`; **add `http://localhost:3000`**, where the site has
+run since 2026-10-10. The client ID is in the owner's `.env.local`
 (git-ignored), and a real sign-in has been tested locally.
 
 Still to do before launch:
@@ -62,7 +63,7 @@ Google moved these screens into **Google Auth Platform** in 2025; older guides t
 
 3. **Clients → Create client**: choose **Web application**.
 4. Under **Authorized JavaScript origins**, add every address the site runs on:
-   - `http://localhost:8080` and `http://localhost` (local development)
+   - `http://localhost:3000` and `http://localhost` (local development)
    - wherever the site is deployed (hosting isn't chosen yet), e.g. a
      `https://<name>.workers.dev` address
    - the real domain once there is one, e.g. `https://auriva.in` and `https://www.auriva.in`

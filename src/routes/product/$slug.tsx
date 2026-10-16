@@ -63,6 +63,7 @@ function ProductPage() {
   const { add } = useCartActions();
   const navigate = useNavigate();
   const [added, setAdded] = useState(false);
+  const soldOut = product.inStock === false;
 
   const onAdd = () => {
     if (!account) {
@@ -122,7 +123,15 @@ function ProductPage() {
           <p className="mt-4 text-[17px] text-muted-foreground italic">
             a scent of {product.auraLabel.toLowerCase()} — {product.quality.toLowerCase()}
           </p>
-          <p className="mt-7 text-[20px]">₹{product.price}</p>
+          <p className="mt-7 text-[20px]">
+            {product.mrp ? (
+              <s className="mr-3 text-[17px] text-muted-foreground">₹{product.mrp}</s>
+            ) : null}
+            ₹{product.price}
+            {soldOut ? (
+              <span className="label-track ml-4 text-muted-foreground">sold out</span>
+            ) : null}
+          </p>
           <p className="mt-1 text-[13px] text-muted-foreground">
             Inclusive of all taxes · {product.contents}
           </p>
@@ -153,18 +162,20 @@ function ProductPage() {
             <button
               type="button"
               onClick={onAdd}
-              disabled={add.isPending}
+              disabled={add.isPending || soldOut}
               aria-live="polite"
               className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
             >
               <BagIcon className="h-4 w-4" />
-              {add.isPending
-                ? "adding to your bag…"
-                : added
-                  ? "added to bag"
-                  : account
-                    ? "add to bag"
-                    : "sign in to add"}
+              {soldOut
+                ? "sold out"
+                : add.isPending
+                  ? "adding to your bag…"
+                  : added
+                    ? "added to bag"
+                    : account
+                      ? "add to bag"
+                      : "sign in to add"}
             </button>
             {add.error ? (
               <p role="alert" className="text-[14px] text-destructive">
@@ -286,7 +297,13 @@ function ProductPage() {
                   <p className="text-[13px] text-muted-foreground italic">
                     a scent of {p.auraLabel.toLowerCase()}
                   </p>
-                  <p className="mt-2 text-[14px]">₹{p.price}</p>
+                  <p className="mt-2 text-[14px]">
+                    {p.mrp ? <s className="mr-2 text-muted-foreground">₹{p.mrp}</s> : null}₹
+                    {p.price}
+                    {p.inStock === false ? (
+                      <span className="label-track ml-3 text-muted-foreground">sold out</span>
+                    ) : null}
+                  </p>
                 </div>
               </div>
             </Link>

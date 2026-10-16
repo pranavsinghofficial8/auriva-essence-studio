@@ -12,7 +12,9 @@ Deeper references (read when relevant):
 - [`docs/architecture.md`](docs/architecture.md): stack, rendering, routing, build and error handling
 - [`docs/user-flows.md`](docs/user-flows.md): every page and user journey, step by step
 - [`docs/design-system.md`](docs/design-system.md): tokens, typography voice, components, motion
-- [`docs/backend-handoff.md`](docs/backend-handoff.md): the API contract for the backend (endpoints, shapes, errors, auth)
+- [`docs/api-integration.md`](docs/api-integration.md): connecting the backend's real API: setup, plan, open points
+- [`docs/api/STOREFRONT-API.md`](docs/api/STOREFRONT-API.md): the backend's API reference (generated; the source of truth)
+- [`docs/backend-handoff.md`](docs/backend-handoff.md): our original API proposal (superseded by the backend's contract)
 - [`docs/google-sign-in.md`](docs/google-sign-in.md): how "Continue with Google" works and how to set it up
 - [`docs/payments.md`](docs/payments.md): how Razorpay checkout works, its test mode and setup
 - [`docs/changelog.md`](docs/changelog.md): what changed and why, newest first

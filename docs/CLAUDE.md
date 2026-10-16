@@ -2,14 +2,21 @@
 
 Auriva is a marketing and storefront site for a premium incense and home-fragrance brand
 ("from petal to presence"). The design brief lives in `README.md`: editorial, unhurried, luxury
-maison (Aesop, Diptyque, COS). This repo is the storefront only. The backend is being built
-separately against the contract in `backend-handoff.md`; until it's connected, an in-browser mock
-stands in. Payments use Razorpay (`payments.md`); the backend's half isn't built yet.
+maison (Aesop, Diptyque, COS). This repo is the storefront only. The backend
+(`../auriva-platform`, the backend developer's repo) is built separately; its contract is
+`api/STOREFRONT-API.md` (generated from `api/openapi.yaml`, the source of truth). Connecting it is
+done page by page per `api-integration.md`: the catalog is live, the rest still uses an
+in-browser mock. Payments: the owner chose Razorpay (`payments.md`); the backend so far only has a
+local fake provider. **Read `status.md` first**: it says where the work stopped, how to run the
+three apps, and what's uncommitted. Never commit or push without the owner's go-ahead.
 
 The site was started in Lovable and is now developed only with Claude Code; the Lovable sync is no
 longer used. Keep `main` building, and don't rewrite pushed history.
 
 ## Commands
+
+The dev server runs on **http://localhost:3000** (set in `vite.config.ts`; the API only accepts
+that origin).
 
 ```sh
 npm run dev        # vite dev server
@@ -84,9 +91,10 @@ CLAUDE.md                 root pointer that imports this file (Claude Code loads
 README.md                 the original design brief and how to run the project
 ```
 
-Start with `status.md` (where things stand and what's next). See `architecture.md`,
-`user-flows.md`, `design-system.md`, `backend-handoff.md`, `google-sign-in.md`, `payments.md` and `changelog.md`
-in this folder for detail.
+Start with `status.md` (where things stand, how to run everything, what's next). See
+`api-integration.md` (wiring the backend), `api/STOREFRONT-API.md` (the backend's API),
+`architecture.md`, `user-flows.md`, `design-system.md`, `google-sign-in.md`, `payments.md` and
+`changelog.md` for detail. `backend-handoff.md` is our superseded original proposal.
 
 ## Key components and data flow
 
@@ -112,10 +120,13 @@ in this folder for detail.
   bare glyph in `text-taupe` is too faint to read.
 - **Data layer** (`src/lib/api/`): every read and write goes through it; pages never import the
   catalog, journal or localStorage directly.
-  - `index.ts`: one async function per backend endpoint (`getProductPage`, `addToCart`,
-    `placeOrder`, …). With `VITE_API_URL` set it calls the real backend (`client.ts`: JSON,
-    cookies, `ApiError`); without it, `mock.ts` answers in the browser (catalog and journal from
-    code; account, bag and orders in localStorage).
+  - `index.ts`: one async function per backend endpoint (`getProductPage`, `getHome`,
+    `addToCart`, …). An area wired to the backend (`live(area)` in `client.ts`; only `catalog`
+    so far) calls it (`client.ts`: JSON, cookies, `X-Auriva-Client`, `ApiError`); the rest, and
+    everything when `VITE_API_URL` is unset, use `mock.ts` (catalog and journal from code;
+    account, bag and orders in localStorage). `backend-types.ts` is the backend's contract
+    (verbatim, don't edit); `adapt.ts` maps it to the page types; `images.ts` swaps unuploaded
+    seed photos for our bundled copies when `VITE_BUNDLED_SEED_IMAGES=true`.
   - `hooks.ts`: TanStack Query hooks for the visitor's own state (`useUser`, `useCart`,
     `useCartActions`, `useAuthActions`, `useOrders`, `useOrder`, `usePlaceOrder`,
     `useConfirmPayment`, `useSearchSuggestions`). They share
@@ -123,17 +134,25 @@ in this folder for detail.
   - Public data (catalog, journal) is fetched in route `loader`s, including during SSR. Visitor
     state loads in the browser; SSR renders the signed-out state.
   - Show pending and error states for every mutation (`isPending`, `errorMessage(error)`).
-  - The endpoint contract is `backend-handoff.md`. Keep `types.ts` and that document in sync.
+  - The endpoint contract is now the backend's `api/STOREFRONT-API.md`; `types.ts` still follows
+    our older `backend-handoff.md` until the rewiring in `api-integration.md` is done.
 - **Search**: the nav's search button (or `/`, or ⌘K / Ctrl K) opens `SearchPanel`, which shows
-  suggestions as you type through `useSearchSuggestions` (`GET /search` with a `limit`). Enter
-  goes to `/search?q=…`. Until the backend exists, `lib/api/mock-search.ts` does the matching
-  (all words must match, prefixes, small typos, a few synonyms, names outrank notes); the
-  backend should behave the same (see `backend-handoff.md`). Add shopper vocabulary to
-  `SYNONYMS` there and starting points to `POPULAR_SEARCHES` in `lib/recent-searches.ts`.
+  suggestions as you type through `useSearchSuggestions` (`search()` with a `limit`). Enter
+  goes to `/search?q=…`. The backend has no search endpoint, so our engine in
+  `lib/api/mock-search.ts` (`searchIn`) always does the matching (all words must match,
+  prefixes, small typos, a few synonyms, names outrank notes): over the built-in catalog with the
+  mock, or over the backend's collections, products and posts (fetched and cached a minute) when
+  the catalog is live. Add shopper vocabulary to `SYNONYMS` there and starting points to
+  `POPULAR_SEARCHES` in `lib/recent-searches.ts`.
 - **Catalog content**: each product has a `ritual` (the invitation shown in its product page's
   aura band, `#ritual`) and an optional `ritualImage` (that band's background, which should
-  evoke the fragrance; it falls back to the category banner). Unknown slugs make loaders
+  evoke the fragrance; it falls back to the category banner). The backend has neither yet, so
+  `adapt.ts` takes them from our `lib/auriva-catalog.ts` by slug. Unknown slugs make loaders
   `throw notFound()`.
+- **Homepage catalog sections** (collection cards, bestsellers, ritual cards, Instashop) come from
+  `getHome()`; if the backend can't be reached it returns the mock's built-in content, so the
+  homepage never loses those sections. The story tiles, quote, feature bar and About page stay
+  in code by the backend's design.
 
 ## Conventions
 
@@ -198,15 +217,22 @@ in this folder for detail.
 
 ## Backend / environment
 
-- The backend is being built separately against `backend-handoff.md`. Until `VITE_API_URL` is
-  set, `src/lib/api/mock.ts` stands in: nothing leaves the browser, the Google ID token is only
-  sanity-checked (the real backend verifies it), and contact or journal submissions go
-  nowhere. Don't rely on the mock for anything security-sensitive.
+- The backend lives in `../auriva-platform` (NestJS + Prisma on Neon Postgres, plus an admin
+  panel); `status.md` has the commands to run it and `api-integration.md` its setup and
+  troubleshooting. Start its API with `NODE_OPTIONS="--import ../.tools/dns-fallback.mjs"`: this
+  Mac's network keeps failing to look up the Neon host, and without the fallback the backend
+  loses its database and the catalog pages fail.
+- Areas not yet wired (account, bag, orders, forms), and everything when `VITE_API_URL` is unset,
+  use `src/lib/api/mock.ts`: nothing leaves the browser, the Google ID token is only
+  sanity-checked, and contact or journal submissions go nowhere. Don't rely on the mock for
+  anything security-sensitive.
 - Phone numbers are validated with `indianMobile` (`lib/validation.ts`), shared by checkout and
   the bulk enquiry form.
 - Env vars (public; typed in `src/vite-env.d.ts`, listed in `.env.example`; read at build time):
   - `VITE_API_URL`: the backend base URL. Unset means the in-browser mock.
   - `VITE_GOOGLE_CLIENT_ID`: enables "Continue with Google" (see `google-sign-in.md`).
+  - `VITE_BUNDLED_SEED_IMAGES`: `true` shows our copies of the backend's seed photos until
+    they're uploaded to Cloudinary (`lib/api/images.ts`).
   - `VITE_RAZORPAY_KEY_ID`: a Razorpay **test** key id that lets the mock open Razorpay's
     window in test mode (see `payments.md`). Ignored once `VITE_API_URL` is set. Never put the
     key secret in the frontend.

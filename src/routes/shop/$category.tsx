@@ -161,7 +161,10 @@ function CategoryPage() {
                 >
                   Discover {p.name}
                 </Link>
-                <span className="text-[15px] text-muted-foreground">₹{p.price}</span>
+                <span className="text-[15px] text-muted-foreground">
+                  {p.mrp ? <s className="mr-2 opacity-70">₹{p.mrp}</s> : null}₹{p.price}
+                  {p.inStock === false ? <span className="label-track ml-3">sold out</span> : null}
+                </span>
               </div>
             </div>
           </section>

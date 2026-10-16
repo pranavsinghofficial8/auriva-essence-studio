@@ -4,24 +4,15 @@ import { Nav } from "@/components/auriva/Nav";
 import { Footer } from "@/components/auriva/Footer";
 import { HeroSmoke } from "@/components/auriva/HeroSmoke";
 import { Reveal, RevealWords } from "@/components/auriva/Reveal";
-import { getProducts } from "@/lib/api";
+import { getHome } from "@/lib/api";
 import { AuraMark, BagIcon, PetalMark, SigilMark, SmokeMark } from "@/components/auriva/marks";
 
 import heroLotus from "@/assets/hero-lotus.jpg";
 import gridEmber from "@/assets/grid-ember.jpg";
-import gridAsh from "@/assets/grid-ash.jpg";
 import gridSmoke from "@/assets/grid-smoke.jpg";
 import gridPetals from "@/assets/grid-petals.jpg";
-import gridCones from "@/assets/grid-cones.jpg";
 
-import collSticks from "@/assets/coll-sticks.jpg";
-import collCones from "@/assets/coll-cones.jpg";
-import collBambooless from "@/assets/coll-bambooless.jpg";
 import bestsellerPanel from "@/assets/bestseller-panel.jpg";
-import ritualStillness from "@/assets/ritual-stillness.jpg";
-import ritualClarity from "@/assets/ritual-clarity.jpg";
-import ritualGrounding from "@/assets/ritual-grounding.jpg";
-import ritualComfort from "@/assets/ritual-comfort.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,71 +33,19 @@ export const Route = createFileRoute("/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  // Bestsellers are one section of many: if they fail to load, leave them out, not the page.
-  loader: async () => ({
-    featured: await getProducts({ featured: "bestseller" }).catch(() => []),
-  }),
+  // The catalog sections (collection, bestsellers, rituals, Instashop) come from the backend, or
+  // its built-in stand-in if it can't be reached (see getHome).
+  loader: async () => ({ home: await getHome().catch(() => null) }),
   component: Home,
 });
 
 /* ---------------------------------- data --------------------------------- */
-
-const categories = [
-  { name: "incense sticks", slug: "incense-sticks", label: "the everyday ritual", img: collSticks },
-  { name: "incense cones", slug: "incense-cones", label: "for slower moments", img: collCones },
-  {
-    name: "bambooless sticks",
-    slug: "bambooless-sticks",
-    label: "a deeper ritual",
-    img: collBambooless,
-  },
-] as const;
-
-/** Editorial one-liners for the bestseller cards; names, prices and photos come from the API. */
-const bestsellerCopy: Record<string, string> = {
-  nagchampa: "lotus, cedar and warm resin — for the morning hour.",
-  oudh: "vetiver and dried petal — a slower, denser drift.",
-  "coconut-cinnamon": "sandal and amber — grounding, resinous, deep.",
-};
 
 /** Link props for hash links within the homepage: glide to the section, no crossfade. */
 const samePageScroll = {
   viewTransition: false,
   hashScrollIntoView: { behavior: "smooth", block: "start" },
 } as const;
-
-const rituals = [
-  {
-    title: "stillness",
-    subtitle: "a quieter mind",
-    body: "lit at dusk, when the day finally stops asking for anything.",
-    img: ritualStillness,
-    product: "vanilla-amber",
-  },
-  {
-    title: "clarity",
-    subtitle: "space to think",
-    body: "a clean, bright drift that makes room at the edges of thought.",
-    img: ritualClarity,
-    product: "lemongrass-citronella",
-  },
-  {
-    title: "grounding",
-    subtitle: "a steady rhythm",
-    body: "earth, root and resin — a return to the weight of the body.",
-    img: ritualGrounding,
-    product: "nagchampa",
-  },
-  {
-    title: "comfort",
-    subtitle: "ease, restored",
-    body: "soft, warm and familiar. the scent of being home again.",
-    img: ritualComfort,
-    product: "rose-amber",
-  },
-];
-
-const instaShots = [gridEmber, gridSmoke, gridAsh, collCones, ritualComfort, collSticks];
 
 /* --------------------------------- pieces -------------------------------- */
 
@@ -169,11 +108,7 @@ function TextTile({
   );
 }
 
-/**
- * `fadeTop` lets a photo in the grid's first row rise out of the hero's ivory fade instead of
- * starting at a hard edge ("lg" = only where it sits in the first row, on wide screens).
- */
-function PhotoTile({ src, alt, fadeTop }: { src: string; alt: string; fadeTop?: "always" | "lg" }) {
+function PhotoTile({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="group relative aspect-[4/3] overflow-hidden bg-sand">
       <img
@@ -183,14 +118,6 @@ function PhotoTile({ src, alt, fadeTop }: { src: string; alt: string; fadeTop?: 
         className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
       />
       <div className="pointer-events-none absolute inset-0 bg-espresso/0 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/15" />
-      {fadeTop ? (
-        <div
-          aria-hidden="true"
-          className={`pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-ivory to-transparent ${
-            fadeTop === "lg" ? "hidden lg:block" : ""
-          }`}
-        />
-      ) : null}
     </div>
   );
 }
@@ -200,11 +127,11 @@ function PhotoTile({ src, alt, fadeTop }: { src: string; alt: string; fadeTop?: 
 function Home() {
   const [slide, setSlide] = useState(0);
   const [feature, setFeature] = useState(0);
-  const { featured } = Route.useLoaderData();
-  const bestsellers = featured.map((p) => ({
+  const { home } = Route.useLoaderData();
+  const bestsellers = (home?.bestsellers ?? []).map((p) => ({
     slug: p.slug,
     name: p.name.toLowerCase(),
-    descriptor: bestsellerCopy[p.slug] ?? p.oneLiner.toLowerCase(),
+    descriptor: p.oneLiner.toLowerCase(),
     price: `₹${p.price}`,
     img: p.image,
   }));
@@ -255,9 +182,7 @@ function Home() {
         </div>
         <div className="animate-drift pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_52%_58%,color-mix(in_oklab,var(--ivory)_55%,transparent),transparent_48%)]" />
         <div className="animate-breathe pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_34%_40%,color-mix(in_oklab,var(--ivory)_38%,transparent),transparent_38%)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ivory/40 via-transparent to-transparent" />
-        {/* The photo dissolves into ivory at its foot, so the story grid grows out of it. */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%] bg-gradient-to-b from-transparent via-ivory/60 to-ivory" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ivory/40 via-transparent to-ivory/55" />
 
         <div className="absolute inset-x-0 bottom-[13vh] flex flex-col items-center px-6 text-center text-espresso">
           <h1 className="animate-rise max-w-3xl text-[32px] leading-[1.25] font-extralight lowercase sm:text-[52px]">
@@ -280,7 +205,7 @@ function Home() {
         id="philosophy"
         className="grid scroll-mt-24 grid-cols-1 gap-px bg-stone-deep sm:grid-cols-2 lg:grid-cols-3"
       >
-        <PhotoTile src={gridEmber} alt="An incense stick glowing at the ember" fadeTop="always" />
+        <PhotoTile src={gridEmber} alt="An incense stick glowing at the ember" />
         <TextTile
           Icon={AuraMark}
           heading="every ritual begins with intention."
@@ -290,7 +215,7 @@ function Home() {
           hash="france"
           tone="bg-ivory hover:bg-parchment"
         />
-        <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" fadeTop="lg" />
+        <PhotoTile src={gridSmoke} alt="Incense smoke curling in warm light" />
         <TextTile
           Icon={PetalMark}
           heading="crafted with purpose."
@@ -321,45 +246,47 @@ function Home() {
       </section>
 
       {/* 4 — COLLECTION */}
-      <section id="collection" className="scroll-mt-24 bg-sand px-6 py-24 sm:px-10 sm:py-32">
-        <div className="mx-auto grid w-full max-w-[1600px] gap-16 lg:grid-cols-[minmax(240px,340px)_1fr] lg:gap-20">
-          <Reveal className="lg:pt-4">
-            <h2 className="font-display text-[32px] leading-tight lowercase">the collection</h2>
-            <div className="my-8 h-px w-full max-w-[220px] bg-taupe" />
-            <p className="max-w-sm text-[17px] leading-[1.8]">
-              Three forms. One philosophy. A collection designed for moments of presence.
-            </p>
-            <ArrowLink className="mt-10">explore all collections</ArrowLink>
-          </Reveal>
+      {home?.collections.length ? (
+        <section id="collection" className="scroll-mt-24 bg-sand px-6 py-24 sm:px-10 sm:py-32">
+          <div className="mx-auto grid w-full max-w-[1600px] gap-16 lg:grid-cols-[minmax(240px,340px)_1fr] lg:gap-20">
+            <Reveal className="lg:pt-4">
+              <h2 className="font-display text-[32px] leading-tight lowercase">the collection</h2>
+              <div className="my-8 h-px w-full max-w-[220px] bg-taupe" />
+              <p className="max-w-sm text-[17px] leading-[1.8]">
+                Three forms. One philosophy. A collection designed for moments of presence.
+              </p>
+              <ArrowLink className="mt-10">explore all collections</ArrowLink>
+            </Reveal>
 
-          <div className="grid gap-px bg-stone-deep sm:grid-cols-3">
-            {categories.map((c, i) => (
-              <Reveal key={c.name} delay={i * 120}>
-                <Link
-                  to="/shop/$category"
-                  params={{ category: c.slug }}
-                  className="group relative block aspect-[3/4] overflow-hidden bg-ivory"
-                >
-                  <img
-                    src={c.img}
-                    alt={c.name}
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.05]"
-                  />
-                  <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-espresso/70 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-6 text-ivory">
-                    <p className="label-track opacity-75">{c.label}</p>
-                    <h3 className="mt-2 font-display text-[22px] lowercase">{c.name}</h3>
-                    <span className="label-track mt-4 inline-block translate-y-2 opacity-0 transition-all duration-700 group-hover:translate-y-0 group-hover:opacity-100">
-                      discover →
-                    </span>
-                  </div>
-                </Link>
-              </Reveal>
-            ))}
+            <div className="grid gap-px bg-stone-deep sm:grid-cols-3">
+              {home.collections.map((c, i) => (
+                <Reveal key={c.slug} delay={i * 120}>
+                  <Link
+                    to="/shop/$category"
+                    params={{ category: c.slug }}
+                    className="group relative block aspect-[3/4] overflow-hidden bg-ivory"
+                  >
+                    <img
+                      src={c.card}
+                      alt={c.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.05]"
+                    />
+                    <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-espresso/70 to-transparent" />
+                    <div className="absolute inset-x-0 bottom-0 p-6 text-ivory">
+                      <p className="label-track opacity-75">{c.eyebrow.toLowerCase()}</p>
+                      <h3 className="mt-2 font-display text-[22px] lowercase">{c.name}</h3>
+                      <span className="label-track mt-4 inline-block translate-y-2 opacity-0 transition-all duration-700 group-hover:translate-y-0 group-hover:opacity-100">
+                        discover →
+                      </span>
+                    </div>
+                  </Link>
+                </Reveal>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* 5 — FEATURE BAR */}
       <section className="bg-espresso text-espresso-foreground">
@@ -476,90 +403,98 @@ function Home() {
       ) : null}
 
       {/* 7 — RITUAL COLLECTION */}
-      <section id="rituals" className="scroll-mt-24 bg-ivory px-6 py-24 sm:px-10 sm:py-32">
-        <Reveal className="mx-auto max-w-2xl text-center">
-          <p className="label-track text-muted-foreground">ritual collection</p>
-          <h2 className="mt-6 font-display text-[30px] leading-tight lowercase sm:text-[42px]">
-            what you seek is already within.
-          </h2>
-          <p className="mt-5 text-[17px] text-muted-foreground">
-            Fragrance as a guide to inner alignment.
-          </p>
-        </Reveal>
+      {home?.rituals.length ? (
+        <section id="rituals" className="scroll-mt-24 bg-ivory px-6 py-24 sm:px-10 sm:py-32">
+          <Reveal className="mx-auto max-w-2xl text-center">
+            <p className="label-track text-muted-foreground">ritual collection</p>
+            <h2 className="mt-6 font-display text-[30px] leading-tight lowercase sm:text-[42px]">
+              what you seek is already within.
+            </h2>
+            <p className="mt-5 text-[17px] text-muted-foreground">
+              Fragrance as a guide to inner alignment.
+            </p>
+          </Reveal>
 
-        <div className="mx-auto mt-16 grid w-full max-w-[1200px] gap-px bg-stone-deep sm:grid-cols-2">
-          {rituals.map((r, i) => (
-            <Link
-              key={r.title}
-              to="/product/$slug"
-              params={{ slug: r.product }}
-              hash="ritual"
-              className="group relative block h-[420px] overflow-hidden bg-parchment text-ivory"
-            >
-              <img
-                src={r.img}
-                alt={`${r.title} ritual mood`}
-                loading="lazy"
-                className="absolute inset-0 h-full w-full scale-105 object-cover opacity-100 transition-all duration-[1100ms] ease-out group-hover:scale-100"
-              />
-              <div className="absolute inset-0 bg-espresso/55 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/70" />
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
-                <SigilMark
-                  variant={i}
-                  className="h-14 w-14 text-stone transition-transform duration-[1100ms] ease-out group-hover:-translate-y-2"
+          <div className="mx-auto mt-16 grid w-full max-w-[1200px] gap-px bg-stone-deep sm:grid-cols-2">
+            {home.rituals.map((r, i) => (
+              <Link
+                key={r.title}
+                to="/product/$slug"
+                params={{ slug: r.productSlug }}
+                hash="ritual"
+                className="group relative block h-[420px] overflow-hidden bg-parchment text-ivory"
+              >
+                <img
+                  src={r.image}
+                  alt={`${r.title} ritual mood`}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full scale-105 object-cover opacity-100 transition-all duration-[1100ms] ease-out group-hover:scale-100"
                 />
-                <h3 className="mt-8 font-display text-[26px] lowercase">{r.title}</h3>
-                <p className="mt-2 italic opacity-70">{r.subtitle}</p>
-                <p className="mt-5 max-w-xs text-[15px] leading-[1.8] opacity-85 transition-opacity duration-[1100ms] ease-out sm:opacity-0 sm:group-hover:opacity-90">
-                  {r.body}
-                </p>
-                <span className="label-track mt-8 opacity-80 transition-opacity duration-[1100ms] sm:opacity-0 sm:group-hover:opacity-100">
-                  explore ritual →
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+                <div className="absolute inset-0 bg-espresso/55 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/70" />
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center px-10 text-center">
+                  <SigilMark
+                    variant={i}
+                    className="h-14 w-14 text-stone transition-transform duration-[1100ms] ease-out group-hover:-translate-y-2"
+                  />
+                  <h3 className="mt-8 font-display text-[26px] lowercase">{r.title}</h3>
+                  <p className="mt-2 italic opacity-70">{r.subtitle}</p>
+                  <p className="mt-5 max-w-xs text-[15px] leading-[1.8] opacity-85 transition-opacity duration-[1100ms] ease-out sm:opacity-0 sm:group-hover:opacity-90">
+                    {r.body}
+                  </p>
+                  <span className="label-track mt-8 opacity-80 transition-opacity duration-[1100ms] sm:opacity-0 sm:group-hover:opacity-100">
+                    explore ritual →
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* 8 — INSTASHOP */}
-      <section className="bg-parchment px-6 py-24 sm:px-10">
-        <h2 className="font-display text-[24px] lowercase">auriva instashop</h2>
-        <div className="mt-4 h-px w-24 bg-taupe" />
+      {home?.instaTiles.length ? (
+        <section className="bg-parchment px-6 py-24 sm:px-10">
+          <h2 className="font-display text-[24px] lowercase">auriva instashop</h2>
+          <div className="mt-4 h-px w-24 bg-taupe" />
 
-        <div className="mt-10 flex snap-x gap-px overflow-x-auto pb-2">
-          {instaShots.map((src, i) => (
-            <div
-              key={i}
-              className="group relative aspect-square w-[72vw] shrink-0 snap-start overflow-hidden sm:w-[calc(25%-1px)]"
-            >
-              <img
-                src={src}
-                alt="Auriva ritual moment"
-                loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.05]"
-              />
-              <Link
-                to="/shop"
-                aria-label="Shop this look"
-                className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center bg-ivory/90 text-espresso opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+          <div className="mt-10 flex snap-x gap-px overflow-x-auto pb-2">
+            {home.instaTiles.map((tile, i) => (
+              <div
+                key={i}
+                className="group relative aspect-square w-[72vw] shrink-0 snap-start overflow-hidden sm:w-[calc(25%-1px)]"
               >
-                <BagIcon className="h-4 w-4" />
-              </Link>
-            </div>
-          ))}
-        </div>
+                <img
+                  src={tile.image}
+                  alt={tile.alt}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-[1100ms] ease-out group-hover:scale-[1.05]"
+                />
+                <Link
+                  {...(tile.productSlug
+                    ? { to: "/product/$slug", params: { slug: tile.productSlug } }
+                    : { to: "/shop" })}
+                  aria-label="Shop this look"
+                  className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center bg-ivory/90 text-espresso opacity-0 transition-opacity duration-700 group-hover:opacity-100"
+                >
+                  <BagIcon className="h-4 w-4" />
+                </Link>
+              </div>
+            ))}
+          </div>
 
-        <a
-          href="https://instagram.com"
-          target="_blank"
-          rel="noreferrer"
-          className="mt-8 inline-block text-[14px] text-muted-foreground transition-opacity duration-500 hover:opacity-60"
-        >
-          follow us on instagram @auriva
-        </a>
-      </section>
+          {home.instagramHandle ? (
+            <a
+              href={`https://instagram.com/${home.instagramHandle}`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-8 inline-block text-[14px] text-muted-foreground transition-opacity duration-500 hover:opacity-60"
+            >
+              follow us on instagram @{home.instagramHandle}
+            </a>
+          ) : null}
+        </section>
+      ) : null}
 
       <Footer />
     </div>

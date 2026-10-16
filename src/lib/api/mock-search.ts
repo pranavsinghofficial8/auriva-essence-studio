@@ -1,8 +1,9 @@
 /**
- * The mock's search engine (`GET /search` in docs/backend-handoff.md), over the catalog and
- * journal in code. The real backend should behave the same way: every word must match (falling
- * back to any word), words match by prefix, small typos are forgiven, a few synonyms are known,
- * and product names outrank notes and descriptions.
+ * The storefront's search engine. The backend has no search endpoint yet, so this runs in the
+ * browser (or during SSR) over whichever catalog the site is using: the built-in one with the
+ * mock, or the backend's products, collections and posts once the catalog is wired. Every word
+ * must match (falling back to any word), words match by prefix, small typos are forgiven, a few
+ * synonyms are known, and product names outrank notes and descriptions.
  */
 
 import { categories, products } from "@/lib/auriva-catalog";
@@ -159,16 +160,16 @@ function rank<T>(items: T[], fieldsOf: (item: T) => Field[], terms: string[]): S
   return pool.sort((a, b) => b.matched - a.matched || b.score - a.score);
 }
 
-const categoryName = (slug: string) => categories.find((c) => c.slug === slug)?.name ?? "";
-
-const productFields = (p: Product): Field[] => [
-  { words: words(p.name), weight: 10 },
-  { words: [...words(categoryName(p.category)), "incense"], weight: 4 },
-  { words: words(`${p.auraLabel} ${p.quality}`), weight: 4 },
-  { words: words(p.notes), weight: 3 },
-  { words: words(p.bestFor), weight: 2 },
-  { words: words(`${p.oneLiner} ${p.poem}`), weight: 1 },
-];
+const productFields =
+  (categoryName: (slug: string) => string) =>
+  (p: Product): Field[] => [
+    { words: words(p.name), weight: 10 },
+    { words: [...words(categoryName(p.category)), "incense"], weight: 4 },
+    { words: words(`${p.auraLabel} ${p.quality}`), weight: 4 },
+    { words: words(p.notes), weight: 3 },
+    { words: words(p.bestFor), weight: 2 },
+    { words: words(`${p.oneLiner} ${p.poem}`), weight: 1 },
+  ];
 
 const categoryFields = (c: Category): Field[] => [
   { words: words(c.name), weight: 10 },
@@ -181,13 +182,20 @@ const postFields = (p: JournalPost): Field[] => [
   { words: words(`${p.intro} ${p.sections.map((s) => s.heading).join(" ")}`), weight: 1 },
 ];
 
-export function searchCatalog(query: string, limit?: number): SearchResults {
+/** What a search runs over. */
+export type SearchIndex = { products: Product[]; categories: Category[]; posts: JournalPost[] };
+
+/** The built-in catalog and journal (used with the mock). */
+export const builtInIndex: SearchIndex = { products, categories, posts: journalPosts };
+
+export function searchIn(index: SearchIndex, query: string, limit?: number): SearchResults {
   const terms = words(query).filter((w) => !STOP_WORDS.has(w));
   if (!terms.length) return { query, products: [], categories: [], posts: [], total: 0 };
 
-  const productHits = rank(products, productFields, terms);
-  const categoryHits = rank(categories, categoryFields, terms).filter((s) => s.score >= 4);
-  const postHits = rank(journalPosts, postFields, terms).filter((s) => s.score >= 3);
+  const categoryName = (slug: string) => index.categories.find((c) => c.slug === slug)?.name ?? "";
+  const productHits = rank(index.products, productFields(categoryName), terms);
+  const categoryHits = rank(index.categories, categoryFields, terms).filter((s) => s.score >= 4);
+  const postHits = rank(index.posts, postFields, terms).filter((s) => s.score >= 3);
 
   // "Showing results for …" when the top products only matched through typo correction.
   const corrections = productHits[0]?.corrections;
@@ -208,3 +216,7 @@ export function searchCatalog(query: string, limit?: number): SearchResults {
     ...(corrected && corrected !== words(query).join(" ") ? { correctedQuery: corrected } : {}),
   };
 }
+
+/** Search the built-in catalog (the mock's `GET /search`). */
+export const searchCatalog = (query: string, limit?: number): SearchResults =>
+  searchIn(builtInIndex, query, limit);

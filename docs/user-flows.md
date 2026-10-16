@@ -23,13 +23,15 @@ that, each step below calls the endpoint listed in `backend-handoff.md`.
 
 1. **Hero**: the lotus photo with animated smoke (`HeroSmoke`: a WebGL shader plus a gentle
    SVG warp of the photo's own wisps; hidden on narrow portrait screens and with reduced motion)
-   and "enter the ritual", which scrolls smoothly to the collection. The photo dissolves into
-   ivory at its foot, and the first row of the story grid's photos rises out of that ivory, so
-   the two sections read as one.
+   and "enter the ritual", which scrolls smoothly to the collection.
 2. **Story grid**: photo tiles and three text tiles. "our philosophy" → `/about#france`, "our
    craft" → `/about#aura`, "our story" → `/about#awaken`.
 3. **Quote**: "at auriva, we renew flowers into incense…" unfurls word by word (`RevealWords`), again each time the visitor scrolls back to it.
-4. **Collection**: three category cards → `/shop/$category`; "explore all collections" → `/shop`.
+4. **Collection**: the backend's highlighted collections (`GET /home`) as cards →
+   `/shop/$category`; "explore all collections" → `/shop`. The collection cards, bestsellers,
+   ritual cards and Instashop all come from `getHome()`; if the backend can't be reached those
+   sections are left out. The Instashop's "follow us" link shows only when an Instagram handle is
+   set in the store settings.
 5. **Feature bar**: three brand promises.
 6. **Bestsellers**: three equal-height product cards with prices aligned and "shop now" →
    `/product/$slug`. On phones it's a one-card carousel with ← n/3 → controls.
@@ -115,7 +117,10 @@ server's message in place. Endpoints are in `backend-handoff.md`.
 - **Who's signed in**: `GET /auth/me`, cached by `useUser()`. The nav shows the first name or
   "sign in", plus the bag count. Pages render signed out on the server and fill in the visitor
   in the browser.
-- **Add to bag** (product page): requires an account; otherwise it goes to `/auth`.
+- **Add to bag** (product page): requires an account; otherwise it goes to `/auth`. A sold-out
+  product (backend `inStock: false`) shows "sold out" and the button is disabled; collection
+  pages and "you may also like" show a "sold out" label, and a discounted product shows its MRP
+  struck through.
 - **Bag** (`/cart`): a loading state, then lines with photo, name, aura and contents, +/−
   quantity (0 removes the line) and remove, then the subtotal. Checkout goes to `/checkout`, or
   to `/auth` when signed out. Empty bag: "your bag is empty" with links to sign in (if signed

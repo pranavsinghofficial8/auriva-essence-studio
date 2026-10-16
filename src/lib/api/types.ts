@@ -80,6 +80,19 @@ export type PaymentResult = {
   razorpaySignature?: string;
 };
 
+/** Everything the homepage shows from the catalog (`GET /home` plus public settings). */
+export type HomeContent = {
+  /** The collection cards, each with its `card` photo. */
+  collections: Category[];
+  bestsellers: Product[];
+  /** The 2×2 ritual cards, in order; each links to its product's ritual band. */
+  rituals: { title: string; subtitle: string; body: string; image: string; productSlug: string }[];
+  /** Instashop tiles; the bag icon goes to the product when there is one, else the shop. */
+  instaTiles: { image: string; alt: string; productSlug?: string; instagramUrl?: string }[];
+  /** Without the "@". */
+  instagramHandle?: string;
+};
+
 /** `GET /search`: what matched a shopper's query, best first. */
 export type SearchResults = {
   query: string;

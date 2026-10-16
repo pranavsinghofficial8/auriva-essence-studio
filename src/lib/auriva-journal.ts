@@ -13,6 +13,8 @@ export type JournalPost = {
   image: string;
   intro: string;
   sections: { heading: string; body: string[] }[];
+  /** The article body as Markdown (backend); when set, it's shown instead of `sections`. */
+  bodyMarkdown?: string;
 };
 
 export const journalPosts: JournalPost[] = [

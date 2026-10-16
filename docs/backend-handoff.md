@@ -1,5 +1,10 @@
 # Backend handoff
 
+> **Superseded (2026-10-10).** The backend developer built to their own contract, now in
+> `api/STOREFRONT-API.md` and `api/openapi.yaml`; the plan for connecting it is in
+> `api-integration.md`. This page is our original proposal, kept for its reasoning (Razorpay
+> flow, search matching, bulk enquiries) and the asks we've sent back.
+
 This is the contract between the Auriva frontend and the backend. The frontend already calls
 every endpoint below. Until the backend exists, an in-browser mock answers instead, so the site
 works today. Point the frontend at your server and the mock switches off.

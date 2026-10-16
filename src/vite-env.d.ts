@@ -7,4 +7,6 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_CLIENT_ID?: string;
   /** Razorpay test key id for the mock's payments (public). Unused once VITE_API_URL is set. See docs/payments.md. */
   readonly VITE_RAZORPAY_KEY_ID?: string;
+  /** "true" shows our bundled copies of the backend's seed photos until they're on Cloudinary. See src/lib/api/images.ts. */
+  readonly VITE_BUNDLED_SEED_IMAGES?: string;
 }

@@ -224,7 +224,7 @@ Requires Node.js 20+ and npm (`package-lock.json` is the lockfile).
 
 ```sh
 npm ci          # install exactly what the lockfile pins
-npm run dev     # http://localhost:8080
+npm run dev     # http://localhost:3000
 npm run build   # production build (Cloudflare target)
 ```
 
