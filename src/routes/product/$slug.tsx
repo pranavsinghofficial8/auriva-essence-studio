@@ -104,14 +104,14 @@ function ProductPage() {
       </div>
 
       {/* MAIN */}
-      <section className="mx-auto grid w-full max-w-[1600px] gap-14 px-6 py-14 sm:px-10 lg:grid-cols-2 lg:gap-24 lg:py-20">
+      <section className="mx-auto grid w-full max-w-[1600px] gap-14 px-6 py-14 sm:px-10 lg:grid-cols-[1.15fr_1fr] lg:gap-28 lg:py-24">
         <div className="self-start bg-secondary">
           <img
             src={product.image}
             alt={`${product.name} ${category.name.toLowerCase()} by Auriva`}
             width={1024}
             height={1280}
-            className="max-h-[860px] w-full object-cover"
+            className="max-h-[940px] w-full object-cover"
           />
         </div>
 
@@ -220,7 +220,7 @@ function ProductPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_65%_at_50%_50%,rgb(48_43_40/0.6),transparent)]" />
         <div className="relative mx-auto flex w-full max-w-[1600px] flex-col items-center px-6 py-28 text-center sm:px-10 sm:py-36">
           <AuraMedallion aura={product.aura} tone="light" className="h-20 w-20" />
-          <p className="label-track mt-8 opacity-85">The Aura</p>
+          <p className="label-track mt-8 lowercase opacity-85">the aura</p>
           <h2 className="mt-4 font-display text-[36px] sm:text-[48px]">
             {"{ "}
             {product.auraLabel.toLowerCase()}
