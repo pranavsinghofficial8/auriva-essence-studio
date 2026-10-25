@@ -191,11 +191,16 @@ function ProductPage() {
             </Link>
           </div>
 
-          <ul className="mt-12 grid max-w-md grid-cols-2 gap-x-8 gap-y-2 text-[13px] text-muted-foreground">
-            {promises.map((x) => (
-              <li key={x}>— {x}</li>
-            ))}
-          </ul>
+          <details className="group/details mt-14 max-w-md border-t border-foreground/15 pt-5 text-[14px] text-muted-foreground">
+            <summary className="label-track cursor-pointer lowercase transition-colors duration-500 hover:text-foreground">
+              details
+            </summary>
+            <ul className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2">
+              {promises.map((x) => (
+                <li key={x}>— {x.toLowerCase()}</li>
+              ))}
+            </ul>
+          </details>
         </div>
       </section>
 
