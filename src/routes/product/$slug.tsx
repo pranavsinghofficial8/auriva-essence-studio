@@ -104,67 +104,59 @@ function ProductPage() {
       </div>
 
       {/* MAIN */}
-      <section className="mx-auto grid w-full max-w-[1600px] gap-14 px-6 py-14 sm:px-10 lg:grid-cols-2 lg:gap-24 lg:py-20">
+      <section className="mx-auto grid w-full max-w-[1600px] gap-14 px-6 py-14 sm:px-10 lg:grid-cols-[1.15fr_1fr] lg:gap-28 lg:py-24">
         <div className="self-start bg-secondary">
           <img
             src={product.image}
             alt={`${product.name} ${category.name.toLowerCase()} by Auriva`}
             width={1024}
             height={1280}
-            className="max-h-[860px] w-full object-cover"
+            className="max-h-[940px] w-full object-cover"
           />
         </div>
 
         <div className="flex flex-col justify-center lg:py-8">
-          <p className="label-track text-muted-foreground">{category.name}</p>
-          <h1 className="mt-4 font-display text-[36px] leading-tight sm:text-[46px]">
-            {product.name}
+          <p className="label-track lowercase text-muted-foreground">
+            {category.name.toLowerCase()}
+          </p>
+          <h1 className="mt-5 font-display text-[44px] leading-[1.05] lowercase sm:text-[62px]">
+            {product.name.toLowerCase()}
           </h1>
-          <p className="mt-4 text-[17px] text-muted-foreground italic">
+          <p className="mt-5 text-[18px] text-muted-foreground italic">
             a scent of {product.auraLabel.toLowerCase()} — {product.quality.toLowerCase()}
           </p>
-          <p className="mt-7 text-[20px]">
-            {product.mrp ? (
-              <s className="mr-3 text-[17px] text-muted-foreground">₹{product.mrp}</s>
-            ) : null}
-            ₹{product.price}
-            {soldOut ? (
-              <span className="label-track ml-4 text-muted-foreground">sold out</span>
-            ) : null}
-          </p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Inclusive of all taxes · {product.contents}
-          </p>
 
-          <div className="hairline my-10 w-full max-w-sm" />
+          <div className="hairline my-12 w-full max-w-sm" />
 
           <div className="max-w-md space-y-4">
             <p className="text-[17px] leading-[1.9]">{product.oneLiner}</p>
             <p className="text-[16px] leading-[1.9] text-muted-foreground">{product.poem}</p>
           </div>
 
-          <dl className="mt-10 max-w-md space-y-6 text-[15px] leading-[1.9]">
-            <div>
-              <dt className="label-track text-muted-foreground">Fragrance Notes</dt>
-              <dd className="mt-1">{product.notes}</dd>
-            </div>
-            <div>
-              <dt className="label-track text-muted-foreground">Best For</dt>
-              <dd className="mt-1">{product.bestFor}</dd>
-            </div>
-            <div>
-              <dt className="label-track text-muted-foreground">Ritual Length</dt>
-              <dd className="mt-1">{product.burn}</dd>
-            </div>
-          </dl>
+          <p className="mt-10 max-w-md text-[15px] leading-[2] text-muted-foreground">
+            {product.notes.toLowerCase()} · {product.bestFor.toLowerCase()} · {product.burn}
+          </p>
 
-          <div className="mt-12 flex max-w-md flex-col gap-4">
+          <p className="mt-14 text-[17px] text-foreground/80">
+            {product.mrp ? (
+              <s className="mr-3 text-[15px] text-muted-foreground">₹{product.mrp}</s>
+            ) : null}
+            ₹{product.price}
+            <span className="ml-3 text-[13px] text-muted-foreground">
+              inclusive of all taxes · {product.contents.toLowerCase()}
+            </span>
+            {soldOut ? (
+              <span className="label-track ml-4 text-muted-foreground">sold out</span>
+            ) : null}
+          </p>
+
+          <div className="mt-8 flex max-w-md flex-col gap-4">
             <button
               type="button"
               onClick={onAdd}
               disabled={add.isPending || soldOut}
               aria-live="polite"
-              className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
+              className="label-track flex items-center justify-center gap-3 border border-foreground/40 px-10 py-5 text-foreground transition-colors duration-500 hover:bg-foreground hover:text-background disabled:opacity-50"
             >
               <BagIcon className="h-4 w-4" />
               {soldOut
@@ -199,11 +191,16 @@ function ProductPage() {
             </Link>
           </div>
 
-          <ul className="mt-12 grid max-w-md grid-cols-2 gap-x-8 gap-y-2 text-[13px] text-muted-foreground">
-            {promises.map((x) => (
-              <li key={x}>— {x}</li>
-            ))}
-          </ul>
+          <details className="group/details mt-14 max-w-md border-t border-foreground/15 pt-5 text-[14px] text-muted-foreground">
+            <summary className="label-track cursor-pointer lowercase transition-colors duration-500 hover:text-foreground">
+              details
+            </summary>
+            <ul className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2">
+              {promises.map((x) => (
+                <li key={x}>— {x.toLowerCase()}</li>
+              ))}
+            </ul>
+          </details>
         </div>
       </section>
 
@@ -223,7 +220,7 @@ function ProductPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_65%_at_50%_50%,rgb(48_43_40/0.6),transparent)]" />
         <div className="relative mx-auto flex w-full max-w-[1600px] flex-col items-center px-6 py-28 text-center sm:px-10 sm:py-36">
           <AuraMedallion aura={product.aura} tone="light" className="h-20 w-20" />
-          <p className="label-track mt-8 opacity-85">The Aura</p>
+          <p className="label-track mt-8 lowercase opacity-85">the aura</p>
           <h2 className="mt-4 font-display text-[36px] sm:text-[48px]">
             {"{ "}
             {product.auraLabel.toLowerCase()}
