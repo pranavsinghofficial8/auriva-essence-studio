@@ -115,7 +115,7 @@ function PhotoTile({ src, alt }: { src: string; alt: string }) {
         src={src}
         alt={alt}
         loading="lazy"
-        className="h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
+        className="tile-pan h-full w-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
       />
       <div className="pointer-events-none absolute inset-0 bg-espresso/0 transition-colors duration-[1100ms] ease-out group-hover:bg-espresso/15" />
     </div>
