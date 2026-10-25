@@ -116,55 +116,47 @@ function ProductPage() {
         </div>
 
         <div className="flex flex-col justify-center lg:py-8">
-          <p className="label-track text-muted-foreground">{category.name}</p>
-          <h1 className="mt-4 font-display text-[36px] leading-tight sm:text-[46px]">
-            {product.name}
+          <p className="label-track lowercase text-muted-foreground">
+            {category.name.toLowerCase()}
+          </p>
+          <h1 className="mt-5 font-display text-[44px] leading-[1.05] lowercase sm:text-[62px]">
+            {product.name.toLowerCase()}
           </h1>
-          <p className="mt-4 text-[17px] text-muted-foreground italic">
+          <p className="mt-5 text-[18px] text-muted-foreground italic">
             a scent of {product.auraLabel.toLowerCase()} — {product.quality.toLowerCase()}
           </p>
-          <p className="mt-7 text-[20px]">
-            {product.mrp ? (
-              <s className="mr-3 text-[17px] text-muted-foreground">₹{product.mrp}</s>
-            ) : null}
-            ₹{product.price}
-            {soldOut ? (
-              <span className="label-track ml-4 text-muted-foreground">sold out</span>
-            ) : null}
-          </p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
-            Inclusive of all taxes · {product.contents}
-          </p>
 
-          <div className="hairline my-10 w-full max-w-sm" />
+          <div className="hairline my-12 w-full max-w-sm" />
 
           <div className="max-w-md space-y-4">
             <p className="text-[17px] leading-[1.9]">{product.oneLiner}</p>
             <p className="text-[16px] leading-[1.9] text-muted-foreground">{product.poem}</p>
           </div>
 
-          <dl className="mt-10 max-w-md space-y-6 text-[15px] leading-[1.9]">
-            <div>
-              <dt className="label-track text-muted-foreground">Fragrance Notes</dt>
-              <dd className="mt-1">{product.notes}</dd>
-            </div>
-            <div>
-              <dt className="label-track text-muted-foreground">Best For</dt>
-              <dd className="mt-1">{product.bestFor}</dd>
-            </div>
-            <div>
-              <dt className="label-track text-muted-foreground">Ritual Length</dt>
-              <dd className="mt-1">{product.burn}</dd>
-            </div>
-          </dl>
+          <p className="mt-10 max-w-md text-[15px] leading-[2] text-muted-foreground">
+            {product.notes.toLowerCase()} · {product.bestFor.toLowerCase()} · {product.burn}
+          </p>
 
-          <div className="mt-12 flex max-w-md flex-col gap-4">
+          <p className="mt-14 text-[17px] text-foreground/80">
+            {product.mrp ? (
+              <s className="mr-3 text-[15px] text-muted-foreground">₹{product.mrp}</s>
+            ) : null}
+            ₹{product.price}
+            <span className="ml-3 text-[13px] text-muted-foreground">
+              inclusive of all taxes · {product.contents.toLowerCase()}
+            </span>
+            {soldOut ? (
+              <span className="label-track ml-4 text-muted-foreground">sold out</span>
+            ) : null}
+          </p>
+
+          <div className="mt-8 flex max-w-md flex-col gap-4">
             <button
               type="button"
               onClick={onAdd}
               disabled={add.isPending || soldOut}
               aria-live="polite"
-              className="label-track flex items-center justify-center gap-3 bg-foreground px-10 py-5 text-background transition-opacity duration-500 hover:opacity-85 disabled:opacity-50"
+              className="label-track flex items-center justify-center gap-3 border border-foreground/40 px-10 py-5 text-foreground transition-colors duration-500 hover:bg-foreground hover:text-background disabled:opacity-50"
             >
               <BagIcon className="h-4 w-4" />
               {soldOut
